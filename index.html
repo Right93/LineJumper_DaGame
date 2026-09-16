@@ -1919,23 +1919,23 @@ function drawHUD() {
 }
 
 function drawTitle() {
-  var grd = g.createLinearGradient(0, 96, 0, 186);
-  grd.addColorStop(0, 'rgba(10,7,20,0.55)');
-  grd.addColorStop(0.25, 'rgba(10,7,20,0.72)');
-  grd.addColorStop(1, 'rgba(10,7,20,0.4)');
+  var grd = g.createLinearGradient(0, 88, 0, 186);
+  grd.addColorStop(0, 'rgba(10,7,20,0.5)');
+  grd.addColorStop(0.3, 'rgba(10,7,20,0.74)');
+  grd.addColorStop(1, 'rgba(10,7,20,0.42)');
   g.fillStyle = grd;
-  g.fillRect(WIN_L, 96, W - WIN_L - WIN_R, 92);
-  var cy = 100;
+  g.fillRect(WIN_L, 88, W - WIN_L - WIN_R, 100);
+  var cy = 92;
   drawTextCenter(g, 'LINE', W / 2 - 2, cy, '#ff4f9a', 5);
   drawTextCenter(g, 'LINE', W / 2 + 2, cy, '#22d3ff', 5);
   drawTextCenter(g, 'LINE', W / 2, cy, '#f6efe2', 5);
-  drawTextCenter(g, 'JUMPER', W / 2 - 2, cy + 26, '#ff4f9a', 5);
-  drawTextCenter(g, 'JUMPER', W / 2 + 2, cy + 26, '#22d3ff', 5);
-  drawTextCenter(g, 'JUMPER', W / 2, cy + 26, '#f6efe2', 5);
+  drawTextCenter(g, 'JUMPER', W / 2 - 2, cy + 27, '#ff4f9a', 5);
+  drawTextCenter(g, 'JUMPER', W / 2 + 2, cy + 27, '#22d3ff', 5);
+  drawTextCenter(g, 'JUMPER', W / 2, cy + 27, '#f6efe2', 5);
   drawTextCenter(g, 'TOKYO EXPRESS - CAR 3 - WINDOW SEAT', W / 2, cy + 56, '#b9a7c4', 1);
-  if (Math.floor(T * 2) % 2) drawTextCenter(g, 'PRESS SPACE OR TAP TO RIDE', W / 2, cy + 70, '#ffe9a8', 1);
-  drawTextCenter(g, 'SPACE JUMP   DOWN DROP   HOLD JUMP TO REACH THE LINE ABOVE', W / 2, 172, '#8f7fb0', 1);
-  drawTextCenter(g, 'M MUTE   R RESTART', W / 2, H - 32, '#77689a', 1);
+  drawTextCenter(g, 'SPACE JUMP   DOWN DROP   M MUTE   R RESTART', W / 2, cy + 68, '#7f7098', 1);
+  drawTextCenter(g, 'HOLD JUMP TO REACH THE LINE ABOVE', W / 2, cy + 79, '#9fb6d8', 1);
+  if (Math.floor(T * 2) % 2) drawTextCenter(g, 'PRESS SPACE OR TAP TO RIDE', W / 2, cy + 92, '#ffe9a8', 1);
 }
 
 function drawOver() {

@@ -35,6 +35,8 @@ HOLDG  = 0.75    // gravity multiplier while jump is held and rising
 DROP_VY = 30     // downward speed when dropping off a wire
 COYOTE = 0.09    // s of grace after leaving a wire
 JBUF   = 0.13    // s of jump input buffering
+UP_CLEAR = 5     // px of clearance needed above a higher wire to land on it
+UP_HOLD  = 0.18  // s the jump must be held while rising to allow an up-landing
 STEP   = 1/120   // fixed simulation step
 ```
 
@@ -53,23 +55,28 @@ level up.
     except where the main line replaces them or a gap punches a hole.
 - Movement rules:
   - **Jump** (Space/↑): flips, lands on the same wire, across a gap, **or up
-    onto a wire one level higher** if the arc genuinely clears it.
+    onto the wire one level higher**. Going up is a *deliberate* move: it only
+    happens when the player **holds the jump** while rising for at least
+    `UP_HOLD` (0.18 s) *and* the arc genuinely clears the higher wire by
+    `UP_CLEAR` (5 px). Tapping never takes you up a level. +40 score, counted
+    as an "up".
   - **Drop** (↓): deliberate stunt to the next wire below; +25 score. On the
     bottom level there is no wire below — you fall to the street (game over),
     so it doubles as an intentional run-ender.
   - Landing is only allowed on a wire that is crossed **while descending**
     (`vy > 0`).
-  - Upward landings (target level < take-off level) require a genuine
-    clearance: `apexY <= wireY - UP_CLEAR` (`UP_CLEAR = 6`). This is what
-    separates an *intentional* jump-up from the old accidental-snag bug where
-    the arc grazed a higher wire by 1–2 px. Only one level up is ever allowed
-    (`minLvl = startLvl - 1`).
+  - The hold + clearance pair is what separates an intentional jump-up from the
+    historical accidental-snag bug (the arc grazing a higher wire by 1–2 px and
+    snapping the runner onto it). Never relax both conditions at once: with
+    clearance alone, a normal held obstacle hop would snag a wire above; with
+    the hold alone, snags would return. Only one level up is ever allowed
+    (`minLvl = startLvl - 1` when `highJump`, else `startLvl`).
   - Falling/dropping can only land on wires **below** the take-off level
-    (`minLvl = startLvl + 1`).
+    (`minLvl = startLvl + 1`, no up option).
 - Game over: hitting a branch/transformer obstacle, or reaching the street.
   There is no health or respawn — the run restarts from the title.
-- Scoring: `distance(m) + sparks*10 + stunts*25`; best score in `localStorage`
-  under `lj_best`.
+- Scoring: `distance(m) + sparks*10 + stunts*25 + ups*40`; best score in
+  `localStorage` under `lj_best`.
 
 ## Art direction (locked)
 
@@ -88,7 +95,8 @@ level up.
     the cane spinning along.
 - Train-window framing is mandatory: riveted frame, sill and coffee cup,
   glass reflections, scene sway. The player runs *inside* the window.
-- Debug helpers that must keep working: `?mode=shot&pose=run|air|drop|fall|over|title|pause&shot=<seconds>&seed=<n>&zoom=<n>&ox=&oy=`, `?mode=test` (on-canvas self test), `?play=1`, `?tun=1`.
+- Debug helpers that must keep working: `?mode=shot&pose=run|air|drop|fall|up|over|title|pause&shot=<seconds>&seed=<n>&zoom=<n>&ox=&oy=`, `?mode=test` (on-canvas self test), `?play=1`, `?tun=1`. `pose=up` drives a held jump and stops right after the up-landing.
+- `?mode=test` phases: 20 s pure auto-run, 30 s with forced drops, 40 s with scripted **held up-jumps** (only triggered on clear stretches). It must report `UP JUMPS OK n/n` with n > 0 or the status is CHECK.
 
 ## Verification workflow
 

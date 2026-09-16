@@ -1108,11 +1108,12 @@ var STREET_Y = 191;
 var WIN_L = 20, WIN_T = 16, WIN_R = 20, WIN_B = 26;
 var SPEED0 = 84, SPEEDMAX = 132, ACCEL = 0.36;
 var GRAV = 620, JUMPV = 172, HOLDG = 0.75, DROP_VY = 30, COYOTE = 0.09, JBUF = 0.13;
+var UP_CLEAR = 5, UP_HOLD = 0.18;
 var PX = 142;
 var STEP = 1 / 120;
 
 var state = 'title', paused = false, T = 0, acc = 0, last = 0;
-var player, world, cam, sparks, stunts, floats, parts, steamParts, crows, drops, cars;
+var player, world, cam, sparks, stunts, ups, floats, parts, steamParts, crows, drops, cars;
 var shakeT = 0, shakeA = 0, flashT = 0, overT = 0, deadMsg = '', finalScore = null;
 var best = 0, newBest = false, poleScan = 0, nextTunnel = 0, tunnelNow = null, boltT = 0, rainOn = true, rainFade = 1;
 var runSeed = SEED;
@@ -1165,13 +1166,17 @@ function wireAt(x, lvl) {
   return decoY(lvl, x);
 }
 
-function landingY(x, fromY, toY, minY, minLvl) {
+function landingY(x, fromY, toY, minY, minLvl, upLvl, apexY) {
   var bestW = null, lo = Math.max(fromY, minY) - 0.5;
   if (minLvl === undefined) minLvl = 0;
+  if (upLvl === undefined) upLvl = -1;
   for (var lvl = minLvl; lvl < LEVELS.length; lvl++) {
     var y = wireAt(x, lvl);
     if (y === null) continue;
     if (y >= lo && y <= toY + 0.5) {
+      if (upLvl >= 0 && lvl < upLvl) {
+        if (apexY === undefined || y - apexY < UP_CLEAR) continue;
+      }
       if (!bestW || y < bestW.y) {
         var sp = mainSpanAt(x);
         bestW = { y: y, lvl: lvl, onMain: !!(sp && sp.lvl === lvl) };
@@ -1235,11 +1240,11 @@ function reset(longSafe, seed) {
   player = {
     x: 0, y: 0, vy: 0, lvl: 2, onMain: true, state: 'run', animT: rng.next(),
     flipT: 0, jumpBuf: 0, coyote: COYOTE, minY: 1e9, landT: 0, deadT: 0,
-    speed: SPEED0, stats: { jumps: 0, lands: 0, gapFalls: 0, drops: 0, stunts: 0, picks: 0, maxLvl: 2 }
+    speed: SPEED0, stats: { jumps: 0, lands: 0, gapFalls: 0, drops: 0, stunts: 0, ups: 0, picks: 0, maxLvl: 2 }
   };
   player.y = wireAt(0, 2);
   cam = { x: player.x - PX, sway: 0, sy: 0 };
-  T = 0; sparks = 0; stunts = 0; floats = []; parts = []; steamParts = []; crows = []; drops = [];
+  T = 0; sparks = 0; stunts = 0; ups = 0; floats = []; parts = []; steamParts = []; crows = []; drops = [];
   cars = [];
   for (var i = 0; i < 7; i++) cars.push({ x: rng.range(-400, 900), lane: rng.chance(0.5) ? 0 : 1, v: rng.range(18, 46), col: rng.pick(['#ffd9a0', '#ff6a4a', '#8ff0ff']) });
   _sc = null;
@@ -1250,7 +1255,7 @@ function reset(longSafe, seed) {
 }
 
 function distM() { return Math.max(0, Math.floor(player.x / 10)); }
-function totalScore() { return distM() + sparks * 10 + stunts * 25; }
+function totalScore() { return distM() + sparks * 10 + stunts * 25 + ups * 40; }
 
 function burst(x, y, col, n, spd) {
   for (var i = 0; i < n; i++) {
@@ -1283,7 +1288,7 @@ function gameOver(kind) {
   audio.crash();
   shakeT = 0.5; shakeA = 3.5; flashT = 0.22;
   burst(player.x, player.y - 10, kind === 'hit' ? '#ffd27a' : '#ff7a5a', 16, 90);
-  finalScore = { dist: distM(), sparks: sparks, stunts: stunts, total: totalScore() };
+  finalScore = { dist: distM(), sparks: sparks, stunts: stunts, ups: ups, total: totalScore() };
   var b = loadBest();
   if (finalScore.total > b) { saveBest(finalScore.total); best = finalScore.total; newBest = true; }
   else { best = b; newBest = false; }
@@ -1294,6 +1299,7 @@ function doJump() {
   var p = player;
   p.state = 'air'; p.vy = -JUMPV; p.flipT = 0; p.jumpBuf = 0; p.coyote = 0;
   p.startLvl = p.lvl; p.minY = 1e9;
+  p.apexY = p.y; p.holdT = 0; p.highJump = false;
   p.stats.jumps++;
   audio.jump();
   burst(p.x - 3, p.y, '#cbbfae', 3, 40);
@@ -1311,7 +1317,12 @@ function landOn(w, fromState) {
   p.state = 'land'; p.landT = 0.12; p.vy = 0; p.flipT = 0;
   if (w.lvl > p.stats.maxLvl) p.stats.maxLvl = w.lvl;
   p.stats.lands++;
-  if (w.lvl > p.startLvl) {
+  if (w.lvl < p.startLvl) {
+    ups++; p.stats.ups++;
+    addFloat(p.x, p.y - 34, 'UP +40', '#b6ff8f');
+    audio.stunt();
+    burst(p.x, p.y + 2, '#b6ff8f', 6, 40);
+  } else if (w.lvl > p.startLvl) {
     stunts++;
     addFloat(p.x, p.y - 30, 'STUNT +25', '#8ff0ff');
     audio.stunt();
@@ -1349,12 +1360,19 @@ function updatePlayer(dt) {
     if (p.jumpBuf > 0) doJump();
   } else if (p.state === 'air') {
     p.flipT += dt;
+    if (input.jumpHeld && p.vy < 0) {
+      p.holdT += dt;
+      if (p.holdT >= UP_HOLD) p.highJump = true;
+    }
     var gr = (input.jumpHeld && p.vy < 0) ? GRAV * HOLDG : GRAV;
     p.vy += gr * dt;
     var py = p.y;
     p.y += p.vy * dt;
+    if (p.y < p.apexY) p.apexY = p.y;
     if (p.vy > 0) {
-      var w1 = landingY(p.x, py, p.y, -1e9, p.startLvl);
+      var upLvl = p.highJump ? p.startLvl : -1;
+      var minLvl = p.highJump ? p.startLvl - 1 : p.startLvl;
+      var w1 = landingY(p.x, py, p.y, -1e9, minLvl, upLvl, p.apexY);
       if (w1) { p.airTime = p.flipT; landOn(w1, 'air'); }
     }
     if (p.y >= STREET_Y) { p.y = STREET_Y; gameOver('street'); }
@@ -1916,7 +1934,8 @@ function drawTitle() {
   drawTextCenter(g, 'JUMPER', W / 2, cy + 26, '#f6efe2', 5);
   drawTextCenter(g, 'TOKYO EXPRESS - CAR 3 - WINDOW SEAT', W / 2, cy + 56, '#b9a7c4', 1);
   if (Math.floor(T * 2) % 2) drawTextCenter(g, 'PRESS SPACE OR TAP TO RIDE', W / 2, cy + 70, '#ffe9a8', 1);
-  drawTextCenter(g, 'SPACE JUMP   DOWN DROP   M MUTE   R RESTART', W / 2, H - 32, '#77689a', 1);
+  drawTextCenter(g, 'SPACE JUMP   DOWN DROP   HOLD JUMP TO REACH THE LINE ABOVE', W / 2, 172, '#8f7fb0', 1);
+  drawTextCenter(g, 'M MUTE   R RESTART', W / 2, H - 32, '#77689a', 1);
 }
 
 function drawOver() {
@@ -1929,7 +1948,7 @@ function drawOver() {
   drawTextCenterOutline(g, 'GAME OVER', W / 2, 58, '#ff6a6a', '#140d18', 4);
   drawTextCenter(g, deadMsg, W / 2, 88, '#e6d8c2', 1);
   drawTextCenter(g, 'DISTANCE ' + finalScore.dist + ' M', W / 2, 106, '#f2e8d4', 2);
-  drawTextCenter(g, 'SPARKS X' + finalScore.sparks + '   STUNTS X' + finalScore.stunts, W / 2, 126, '#8ff0ff', 1);
+  drawTextCenter(g, 'SPARKS X' + finalScore.sparks + '  STUNTS X' + finalScore.stunts + '  UPS X' + finalScore.ups, W / 2, 126, '#8ff0ff', 1);
   drawTextCenter(g, 'TOTAL ' + finalScore.total, W / 2, 136, '#ffd27a', 1);
   if (newBest) drawTextCenter(g, 'NEW BEST!', W / 2, 146, '#9fffa8', 1);
   else drawTextCenter(g, 'BEST ' + best, W / 2, 146, '#c8b9a6', 1);
@@ -2003,7 +2022,7 @@ function render() {
 
 function scriptedInput() {
   var p = player;
-  input.jumpHeld = (p.state === 'air' && p.flipT < 0.16);
+  input.jumpHeld = (p.state === 'air' && p.flipT < 0.16) || (ai.holdUntil !== undefined && T < ai.holdUntil);
   if (p.state !== 'run' && p.state !== 'land') return;
   var lvl = p.lvl;
   for (var i = 0; i < world.gaps.length; i++) {
@@ -2043,7 +2062,7 @@ function drawTestReport(info) {
   g.fillRect(0, 0, W, H);
   g.globalAlpha = 1;
   var errs = RUNTIME_ERRORS.concat(ART_ERRORS);
-  var ok = errs.length === 0 && info.lands > 4 && info.jumps > 4;
+  var ok = errs.length === 0 && info.lands > 4 && info.jumps > 4 && info.upOK > 0;
   drawText(g, 'LINE JUMPER - SELF TEST', 8, 8, '#f2e8d4', 1);
   drawText(g, ok ? 'STATUS: PASS' : 'STATUS: CHECK', 8, 20, ok ? '#9fffa8' : '#ffb0b0', 2);
   var lines = [
@@ -2053,7 +2072,8 @@ function drawTestReport(info) {
     'LANDINGS      ' + info.lands,
     'GAP FALLS     ' + info.gapFalls,
     'DROPS TRIED   ' + info.drops,
-    'STUNTS        ' + info.stunts,
+    'UP JUMPS OK   ' + info.upOK + '/' + info.upTry,
+    'STUNTS/UPS    ' + info.stunts + '/' + info.ups,
     'SPARKS        ' + info.picks,
     'MAX LEVEL     ' + info.maxLvl,
     'PHASE1        ' + info.deaths,
@@ -2087,15 +2107,43 @@ function runSelfTest() {
     }
   });
   var dropsNow = player.stats.drops;
+  reset(false); state = 'play';
+  var upTry = 0, upOK = 0, pendingFrom = -1, lastUpT = -99, prevSt = player.state;
+  simulate(40, {
+    onStep: function (t) {
+      var p = player;
+      if (pendingFrom >= 0 && prevSt !== 'land' && p.state === 'land') {
+        if (p.lvl < pendingFrom) upOK++;
+        pendingFrom = -1;
+      }
+      prevSt = p.state;
+      if (p.state === 'run' && t - lastUpT > 4.5) {
+        var clear = true, i;
+        for (i = 0; i < world.gaps.length; i++) {
+          var d = world.gaps[i].x0 - p.x;
+          if (d > 0 && d < 170) clear = false;
+        }
+        var sp = mainSpanAt(p.x);
+        if (sp && sp.obs && sp.obs.x - p.x > -20 && sp.obs.x - p.x < 170) clear = false;
+        if (sp && p.x < sp.x0 + 20) clear = false;
+        if (clear && p.lvl > 0) {
+          lastUpT = t; pendingFrom = p.lvl; upTry++;
+          p.jumpBuf = JBUF;
+          ai.holdUntil = T + 0.42;
+        }
+      }
+    }
+  });
+  var upsNow = player.stats.ups;
   render();
   var errs = RUNTIME_ERRORS.length + ART_ERRORS.length;
   drawTestReport({
-    t: p1 + 30, state: state, dist: distM(), score: totalScore(),
+    t: p1 + 70, state: state, dist: distM(), score: totalScore(),
     jumps: r1.jumps, jumpsIssued: ai.jumps, lands: r1.lands, gapFalls: r1.gaps,
-    drops: dropsNow, stunts: stunts, picks: r1.picks, maxLvl: player.stats.maxLvl,
+    drops: dropsNow, stunts: stunts, ups: upsNow, picks: r1.picks, maxLvl: player.stats.maxLvl,
     street: (state === 'over' && deadMsg.indexOf('STREET') >= 0) ? 1 : 0,
     deaths: 'P1 ' + r1.dist + 'M  DROPS ' + attempted,
-    errs: errs
+    upTry: upTry, upOK: upOK, errs: errs
   });
   document.title = errs === 0 ? 'TEST PASS' : 'TEST ERRORS ' + errs;
 }
@@ -2121,6 +2169,27 @@ function runShot() {
     else if (pose === 'drop') simulate(secs, { stopWhen: function () { return player.state === 'drop' && player.vy > 18; } });
     else if (pose === 'fall') simulate(secs, { stopWhen: function () { return player.state === 'fall' && player.vy > 10; } });
     else if (pose === 'over') { simulate(secs); if (state === 'play') gameOver('street'); simulate(1.6); }
+    else if (pose === 'up') {
+      var launched = false, done = false;
+      simulate(secs, {
+        onStep: function () {
+          if (done) return;
+          if (!launched && player.state === 'run' && player.lvl > 0) {
+            var clear = true, i;
+            for (i = 0; i < world.gaps.length; i++) { var d = world.gaps[i].x0 - player.x; if (d > 0 && d < 200) clear = false; }
+            var sp = mainSpanAt(player.x);
+            if (sp && sp.obs && sp.obs.x - player.x > -40 && sp.obs.x - player.x < 200) clear = false;
+            if (clear && player.x > 200) {
+              launched = true; player.jumpBuf = JBUF; ai.holdUntil = T + 0.42;
+            }
+          } else if (launched && player.state === 'land') {
+            done = true;
+          }
+        },
+        stopWhen: function () { return done; }
+      });
+      simulate(0.3);
+    }
     else simulate(secs);
   }
   render();

@@ -26,9 +26,9 @@ physics decision is locked in.** It is the source of truth for future sessions.
 ## Physics constants (locked)
 
 ```js
-SPEED0 = 84      // starting forward speed, px/s
-ACCEL  = 0.36    // px/s gained per second of run time
-SPEEDMAX = 132   // hard speed cap
+SPEED0 = 82      // starting forward speed, px/s
+ACCEL  = 0.75    // px/s gained per second of run time (82 -> 148 in ~90 s)
+SPEEDMAX = 148   // hard speed cap
 GRAV   = 620     // px/s^2
 JUMPV  = 172     // initial jump velocity, px/s (up)
 HOLDG  = 0.75    // gravity multiplier while jump is held and rising
@@ -46,8 +46,12 @@ level up.
 
 ## Wire-level rules
 
-- `LEVELS = [58, 76, 94, 112, 130]` (screen y of each wire, level 0 = highest).
+- `LEVELS = [70, 94, 118]` — **three cables only** (screen y of each wire,
+  level 0 = highest). Fewer cables keeps the window readable; do not add levels
+  back without a visual reason. Spacing is 24 px, chosen so a held jump
+  (32 px apex) still clears exactly one level with `UP_CLEAR` margin.
   `STREET_Y = 191` — reaching it is game over.
+- The starting level is the middle one (`lvl = 1`).
 - Two kinds of wire:
   - **main line** — generated spans with sag, ramps between levels, gaps,
     obstacles and pickups. The player tracks it with `player.onMain`.
@@ -73,6 +77,11 @@ level up.
     (`minLvl = startLvl - 1` when `highJump`, else `startLvl`).
   - Falling/dropping can only land on wires **below** the take-off level
     (`minLvl = startLvl + 1`, no up option).
+- Level-generation guards learned the hard way:
+  - Never place an obstacle closer than `max(74, ramp + 104)` px from a span
+    start. Jumping out of a level-change ramp puts the runner on a descending
+    arc with only ~7 px of clearance, which reads as an unfair trip.
+  - A gap and a level-change ramp never coexist on the same span.
 - Game over: hitting a branch/transformer obstacle, or reaching the street.
   There is no health or respawn — the run restarts from the title.
 - Scoring: `distance(m) + sparks*10 + stunts*25 + ups*40`; best score in
@@ -82,20 +91,29 @@ level up.
 
 - Palette is dusk/neon: warm smog horizon, violet sky, dark neon-lit low-rise
   Tokyo, no skyscrapers. Character art uses the `PP` palette in the script.
-- **Character: lean noir silhouette, not a heavy build.**
-  - Slim trench coat in cream/tan, visible lapels and a flowing tail that
-    trails behind from momentum.
-  - Dark bowler/fedora-style hat (rounded small crown, short brim) — **not** a
-    top hat.
-  - Narrow torso (6–8 px), long legs (≈10 px, one third of total height),
-    small head. Total ≈ 30 px tall on a 384×216 canvas.
-  - Run cycle: dynamic mid-stride, one leg kicked back and bent at the knee,
-    arms swinging; front hand carries the cane.
+- **Character: lean noir silhouette, not a heavy build.** This was got wrong
+  twice (a bell-shaped coat both times) — the fix is width, not detail:
+  - Sprite is **14×30**. The coat body is only 5–6 px wide; anything wider
+    reads as a fat man at this scale, no matter how it is shaded.
+  - Cream/tan trench coat with a darker back edge (`c`), a lapel line (`d`)
+    and a narrow tail wedge behind the hips, plus a short procedural flutter.
+  - Dark bowler: small 4-px crown, 8-px brim, shadowed face, single eye pixel.
+  - Long legs (10 px, a third of total height), thin, in mid-blue trousers so
+    they read against the dark city.
+  - Run cycle = contact → down → pass → push-off, 4 frames, where the feet
+    visibly travel: back leg bent with the foot up behind (contact), both legs
+    bent under the body (down), legs together with the trailing foot lifted
+    (pass), trailing leg extended to the ground with the lead knee raised.
+    Body bob per frame is `[0, +1, 0, -1]`.
+  - **The run animation rate is coupled to speed**:
+    `fps = clamp(speed / 6.2, 12, 18)`. A fixed rate makes the feet slide as
+    the game speeds up.
   - Jump = tucked body rotated in 30° steps (12 prerendered rotations) with
     the cane spinning along.
 - Train-window framing is mandatory: riveted frame, sill and coffee cup,
   glass reflections, scene sway. The player runs *inside* the window.
-- Debug helpers that must keep working: `?mode=shot&pose=run|air|drop|fall|up|over|title|pause&shot=<seconds>&seed=<n>&zoom=<n>&ox=&oy=`, `?mode=test` (on-canvas self test), `?play=1`, `?tun=1`. `pose=up` drives a held jump and stops right after the up-landing.
+- Debug helpers that must keep working: `?mode=shot&pose=run|air|drop|fall|up|over|title|pause&shot=<seconds>&seed=<n>&zoom=<n>&ox=&oy=`, `?mode=test` (on-canvas self test), `?mode=sheet` (sprite sheet: all run frames at 2x, flip rotations, fall/land), `?play=1`, `?tun=1`. `pose=up` drives a held jump and stops right after the up-landing.
+- When zooming for a close-up, aim the crop at the wire the runner is on: `oy = wireY - 14` (wireY comes from `LEVELS`), otherwise the crop misses him.
 - `?mode=test` phases: 20 s pure auto-run, 30 s with forced drops, 40 s with scripted **held up-jumps** (only triggered on clear stretches). It must report `UP JUMPS OK n/n` with n > 0 or the status is CHECK.
 
 ## Verification workflow

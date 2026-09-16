@@ -8,16 +8,35 @@ description: Durable spec and rules for the LINE JUMPER game in D:\Fake desktop\
 Persistent spec for this project. **Update this file whenever a design or
 physics decision is locked in.** It is the source of truth for future sessions.
 
-## Hard constraints
+## Layout and build
 
-- The game is exactly one self-contained file: `index.html`.
-  - No external assets, no image/audio files, no CDN links, no build step, no
-    bundler, no npm dependencies. Everything is drawn procedurally with
-    Canvas 2D from string-array sprites and `fillRect`.
-  - Vanilla ES5-style JS in a single inline `<script>`. No modules (the file
-    must run from `file://`).
-  - Internal resolution is 384×216, upscaled with `image-rendering: pixelated`
-    (integer CSS scale, max 7×).
+Development happens in the split sources; the single file is a **generated
+artifact**, never hand-edited:
+
+```
+index.html          dev shell: loads the sources with <script src="src/...">
+src/core.js         constants, math/rng, canvas primitives, pixel font
+src/character.js    outfit palettes, sprite rig, tail physics, player render
+src/world.js        scenery themes + parallax tiles + window dressing
+src/audio.js        synthesised SFX + background music track
+src/game.js         boot, wire/pole generation, physics, scoring, HUD, input
+preview.html        character preview harness (states, frame stepping)
+build.js            `node build.js` -> dist/index.html (single file, no deps)
+dist/index.html     built distributable (committed so the repo stays playable)
+```
+
+- `src/*.js` are plain scripts sharing one global scope; load order is
+  core → character → world → audio → game. No ES modules (must run from
+  `file://`).
+- `node build.js` concatenates the sources into one inline `<script>` and
+  embeds `bgm.mp3` as a base64 data URI. `--no-bgm` skips the embed.
+- **All tests run against `dist/index.html`**, plus one smoke check of the dev
+  shell. Always run `node build.js` before testing after a source edit.
+- No external assets other than the optional `bgm.mp3` (embedded at build), no
+  CDN links, no npm dependencies. Everything else is drawn procedurally with
+  Canvas 2D from string-array sprites and `fillRect`.
+- Internal resolution is 384×216, upscaled with `image-rendering: pixelated`
+  (integer CSS scale, max 7×).
 - Keep runtime errors at zero. The page captures `window.onerror` into
   `RUNTIME_ERRORS` and draws them on-canvas in red. Never ship with entries in
   `RUNTIME_ERRORS` or `ART_ERRORS`.

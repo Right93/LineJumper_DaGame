@@ -100,19 +100,43 @@ level up.
   - Dark bowler: small 4-px crown, 8-px brim, shadowed face, single eye pixel.
   - Long legs (10 px, a third of total height), thin, in mid-blue trousers so
     they read against the dark city.
-  - Run cycle = contact → down → pass → push-off, 4 frames, where the feet
-    visibly travel: back leg bent with the foot up behind (contact), both legs
-    bent under the body (down), legs together with the trailing foot lifted
-    (pass), trailing leg extended to the ground with the lead knee raised.
-    Body bob per frame is `[0, +1, 0, -1]`.
-  - **The run animation rate is coupled to speed**:
-    `fps = clamp(speed / 6.2, 12, 18)`. A fixed rate makes the feet slide as
-    the game speeds up.
-  - Jump = tucked body rotated in 30° steps (12 prerendered rotations) with
-    the cane spinning along.
+  - **Animation is a composed pose system, not hand-drawn keyframes.** Do not
+    reintroduce the old 4-frame full-body frames (they were patched from an
+    early heavier rig and read as a shuffle):
+    - `BODY` (22 rows) is constant: hat, face, collar, coat, hips.
+    - `LEG_SHAPES` is a dict of 8 eight-row leg poses (`plantF`, `plant`,
+      `plantB`, `toe`, `lift`, `pass`, `reach`, `reachLo`).
+    - `RUN_LEGS` is the 8-step cycle table `[leftShape, rightShape]`;
+      `composeRun()` merges them over `BODY`, the right (near) leg winning
+      overlaps. Add or retune poses by editing the table, not by redrawing
+      whole frames.
+  - Legs: **narrow stance, feet within x3–10 of the 14-px sprite** (centreline
+    ≈ x6). No wide splay — he is running a wire. The stance foot still travels
+    ~4 px (forward contact → under → behind → toe-off) and the swing foot
+    lifts 2–3 rows with a bent knee, which is what makes the cycle read.
+  - Arms stay contained: the sleeve is baked into `BODY`; only the cane angle
+    moves (`0.42 ± 0.16` rad). No flailing.
+  - Body bob per step is `[0, +1, 0, -1]`, i.e. `[0,1,0,-1][frame % 4]` over
+    the 8 frames (two bounces per cycle).
+  - **Run animation rate is coupled to speed**:
+    `fps = clamp(speed / 6.6, 11, 17)` over 8 frames. A fixed rate makes the
+    feet slide as the game speeds up.
+  - **Coat flows, it is not static colouring.** A 7-point verlet chain (`tailPts`,
+    `TAIL_SEG = 3.0`) hangs from the coat's back hem and is drawn *behind* the
+    body: damping 0.9, small gravity, plus `wind = -speed * dt * 0.55` so it
+    streams backwards when running and whips during flips/falls. `tailKick()`
+    adds a settling impulse on landing.
+  - **Flip/roll**: tighter 10×14 tuck (`TUCK`, 12 prerendered 30° rotations)
+    with the cane spinning along. Rotation is **eased, never linear**:
+    `rot = smoothstep(prog) * 360` where `prog = flipT / FLIP_T` (0.66 s), so
+    it starts and ends slow.
+  - **Landing is a 3-pose recovery, not a snap back to idle**: `RECOVER0`
+    (impact crouch, coat flying) → `RECOVER1` (crouch, coat settling) →
+    `RECOVER2` (rise), played over `LAND_T = 0.3 s`; jumping is allowed again
+    after 0.08 s so it still feels responsive.
 - Train-window framing is mandatory: riveted frame, sill and coffee cup,
   glass reflections, scene sway. The player runs *inside* the window.
-- Debug helpers that must keep working: `?mode=shot&pose=run|air|drop|fall|up|over|title|pause&shot=<seconds>&seed=<n>&zoom=<n>&ox=&oy=`, `?mode=test` (on-canvas self test), `?mode=sheet` (sprite sheet: all run frames at 2x, flip rotations, fall/land), `?play=1`, `?tun=1`. `pose=up` drives a held jump and stops right after the up-landing.
+- Debug helpers that must keep working: `?mode=shot&pose=run|air|drop|fall|up|land|over|title|pause&shot=<seconds>&seed=<n>&zoom=<n>&ox=&oy=`, `?mode=test` (on-canvas self test), `?mode=sheet` (all 8 run frames at 2x plus the recovery, fall and flip poses), `?play=1`, `?tun=1`. `pose=up` drives a held jump and stops right after the up-landing; `pose=land` stops on the touchdown frame.
 - When zooming for a close-up, aim the crop at the wire the runner is on: `oy = wireY - 14` (wireY comes from `LEVELS`), otherwise the crop misses him.
 - `?mode=test` phases: 20 s pure auto-run, 30 s with forced drops, 40 s with scripted **held up-jumps** (only triggered on clear stretches). It must report `UP JUMPS OK n/n` with n > 0 or the status is CHECK.
 

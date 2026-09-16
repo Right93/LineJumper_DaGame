@@ -35,8 +35,7 @@ var WIN_L = 20, WIN_T = 16, WIN_R = 20, WIN_B = 26;
 var SPEED0 = 82, SPEEDMAX = 148, ACCEL = 0.75;
 var GRAV = 620, JUMPV = 172, HOLDG = 0.75, DROP_VY = 30, COYOTE = 0.09, JBUF = 0.13;
 var UP_CLEAR = 5, UP_HOLD = 0.18;
-var LAND_T = 0.3, FLIP_T = 0.66;
-var TAIL_SEG = 3.0;
+
 var PX = 142;
 var STEP = 1 / 120;
 
@@ -205,7 +204,7 @@ function startGame() {
   runSeed = (Math.random() * 1e9) | 0;
   reset(false);
   state = 'play'; paused = false;
-  audio.setMusic(true); audio.setRumble(0.13);
+  audio.musicStart(); audio.setRumble(0.13);
   audio.ui();
 }
 
@@ -222,7 +221,7 @@ function gameOver(kind) {
   var b = loadBest();
   if (finalScore.total > b) { saveBest(finalScore.total); best = finalScore.total; newBest = true; }
   else { best = b; newBest = false; }
-  audio.setMusic(false); audio.setRumble(0.05);
+  audio.musicStop(); audio.setRumble(0.05);
 }
 
 function doJump() {
@@ -628,117 +627,6 @@ function drawPicks() {
       g.globalAlpha = 1;
       blit(g, art.spark, sx - 1, sy - 1);
     }
-  }
-}
-
-function drawPlayer() {
-  var p = player;
-  var sx = p.x - cam.x + cam.sway;
-  var alpha = p.inv > 0 ? 0.5 : 1;
-  if (p.state === 'run' || p.state === 'land') {
-    var afps = clamp(p.speed / 6.6, 11, 17);
-    var land = p.state === 'land';
-    var f, spr;
-    if (land) {
-      f = Math.min(2, Math.floor((LAND_T - p.landT) / (LAND_T / 3)));
-      spr = art.recover[f];
-    } else {
-      f = Math.floor(p.animT * afps) % 8;
-      spr = art.run[f];
-    }
-    var bob = land ? 0 : [0, 1, 0, -1][f % 4];
-    var top = p.y + cam.sy + bob - (spr.h - 1);
-    blit(g, spr, sx - 7, top, false, alpha);
-    var swing = land ? -0.08 : Math.sin(p.animT * afps * 0.5) * 0.16;
-    drawCane(sx + 3, top + (land ? 12 : 16), 0.42 + swing, alpha);
-  } else if (p.state === 'air') {
-    var prog = clamp(p.flipT / FLIP_T, 0, 1);
-    var rot = prog * prog * (3 - 2 * prog) * 360;
-    var idx = Math.floor(rot / 30) % 12;
-    var ts = art.tuck[idx];
-    var cx2 = sx, cy2 = p.y + cam.sy - 16;
-    g.globalAlpha = alpha;
-    blit(g, ts, cx2 - ts.w / 2, cy2 - ts.h / 2);
-    g.globalAlpha = 1;
-    var ang = rot * Math.PI / 180;
-    var ox = 4, oy = -5;
-    var hx = cx2 + ox * Math.cos(ang) - oy * Math.sin(ang);
-    var hy = cy2 + ox * Math.sin(ang) + oy * Math.cos(ang);
-    drawCane(hx, hy, ang + 0.9, alpha);
-    g.globalAlpha = 0.16;
-    g.fillStyle = '#dfe8f5';
-    for (var w = 0; w < 3; w++) g.fillRect(Math.round(sx - 14 - w * 7), Math.round(p.y - 10 - w * 3), 5, 1);
-    g.globalAlpha = 1;
-  } else if (p.state === 'drop' || p.state === 'fall') {
-    var fs = Math.floor(p.animT * 9) % 2;
-    var fspr = art.fall[fs];
-    blit(g, fspr, sx - 7, p.y + cam.sy - (fspr.h - 1), false, alpha);
-    drawCane(sx + 4, p.y + cam.sy - 15, 2.1, alpha);
-  } else if (p.state === 'dead') {
-    var idx2 = Math.floor(p.deadT * 9) % 12;
-    var ts2 = art.tuck[idx2];
-    blit(g, ts2, sx - ts2.w / 2, p.y + cam.sy - 16 - ts2.h / 2, false, Math.max(0, 1 - p.deadT * 0.5));
-  }
-}
-
-function drawCane(x, y, theta, alpha) {
-  g.globalAlpha = alpha === undefined ? 1 : alpha;
-  var dx = Math.sin(theta), dy = Math.cos(theta);
-  for (var i = 0; i < 8; i++) {
-    g.fillStyle = i < 6 ? '#7c5230' : '#b8863f';
-    g.fillRect(Math.round(x + dx * i), Math.round(y + dy * i), 1, 1);
-  }
-  g.fillStyle = '#efe6d8';
-  g.fillRect(Math.round(x), Math.round(y), 1, 1);
-  g.globalAlpha = 1;
-}
-
-var tailPts = [], tailKickV = 0;
-
-function initTail(x, y) {
-  tailPts = [];
-  for (var i = 0; i < 7; i++) tailPts.push({ x: x - i * TAIL_SEG, y: y + i * 0.6, px: x - i * TAIL_SEG, py: y + i * 0.6 });
-  tailKickV = 0;
-}
-
-function tailKick(v) { tailKickV = v; }
-
-function updateTail(dt) {
-  var p = player;
-  if (!tailPts.length) initTail(p.x - 4, p.y - 12);
-  var ax = p.x - 4, ay = p.y - 12;
-  var wind = -p.speed * dt * 0.55;
-  var i, q, vx, vy;
-  for (i = 0; i < tailPts.length; i++) {
-    q = tailPts[i];
-    if (i === 0) { q.x = ax; q.y = ay; q.px = ax; q.py = ay; continue; }
-    vx = (q.x - q.px) * 0.9;
-    vy = (q.y - q.py) * 0.9;
-    q.px = q.x; q.py = q.y;
-    q.x += vx + wind * ((i < 4) ? 0.5 : 1);
-    q.y += vy + 0.1 - tailKickV * 0.12 + ((i < 3) ? 0.12 : 0);
-  }
-  tailKickV *= 0.84;
-  for (var it = 0; it < 3; it++) {
-    for (var j = 1; j < tailPts.length; j++) {
-      var a = tailPts[j - 1], b = tailPts[j];
-      var dx = b.x - a.x, dy = b.y - a.y;
-      var d = Math.sqrt(dx * dx + dy * dy) || 0.001;
-      var diff = (d - TAIL_SEG) / d * 0.5;
-      b.x -= dx * diff; b.y -= dy * diff;
-      a.x += dx * diff; a.y += dy * diff;
-    }
-    tailPts[0].x = ax; tailPts[0].y = ay;
-  }
-}
-
-function drawTail() {
-  for (var i = 1; i < tailPts.length; i++) {
-    var q = tailPts[i];
-    var sx2 = Math.round(q.x - cam.x + cam.sway), sy2 = Math.round(q.y + cam.sy);
-    g.fillStyle = i < 4 ? '#d8c296' : '#b0976c';
-    g.fillRect(sx2, sy2, 1, 1);
-    if (i > 3) g.fillRect(sx2, sy2 + 1, 1, 1);
   }
 }
 
@@ -1178,34 +1066,35 @@ function runShot() {
   document.title = 'SHOT ' + pose + ' ' + secs + (RUNTIME_ERRORS.length || ART_ERRORS.length ? ' ERRS ' + (RUNTIME_ERRORS.length + ART_ERRORS.length) : ' OK');
 }
 
-function blitScaled(s, x, y, k, flip) {
-  if (flip) { g.save(); g.translate(x + s.w * k, y); g.scale(-1, 1); g.drawImage(s.c, 0, 0, s.w * k, s.h * k); g.restore(); }
-  else g.drawImage(s.c, Math.round(x), Math.round(y), s.w * k, s.h * k);
+function drawAudioReport(lines) {
+  g.globalAlpha = 0.9;
+  g.fillStyle = '#080611';
+  g.fillRect(0, 0, W, H);
+  g.globalAlpha = 1;
+  drawText(g, 'AUDIO CHECK', 8, 8, '#ffe9a8', 2);
+  for (var i = 0; i < lines.length; i++) drawText(g, lines[i].slice(0, 62), 8, 32 + i * 10, '#cfe0f0', 1);
+  drawText(g, 'SFX CTX ' + (audio.ok() ? 'READY' : 'UNAVAILABLE'), 8, 32 + lines.length * 10 + 8, '#9fffa8', 1);
 }
 
-function runSheet() {
-  g.fillStyle = '#161122';
-  g.fillRect(0, 0, W, H);
-  var i, s, k = 2;
-  for (i = 0; i < 8; i++) {
-    var row = i < 4 ? 0 : 1;
-    var col = i % 4;
-    var x = 8 + col * 94, footY = 78 + row * 72;
-    s = art.run[i];
-    var top = footY - (s.h - 1) * k;
-    blitScaled(s, x, top, k, false);
-    drawCane(x + 10 * k, top + 16 * k, 0.42, 1);
-    rect(g, x, footY + 2, 60, 1, '#3a3450');
-    drawText(g, 'F' + i + ' BOB' + ([0, 1, 0, -1][i % 4]), x, footY + 5, '#9fb6d8', 1);
-  }
-  drawText(g, 'RECOVER 1X', 6, 163, '#ffe9a8', 1);
-  var ry = 208;
-  for (i = 0; i < 3; i++) { s = art.recover[i]; blit(g, s, 8 + i * 26, ry - (s.h - 1), false); }
-  drawText(g, 'IMPACT CROUCH RISE', 6, 210, '#9fb6d8', 1);
-  drawText(g, 'FALL 1X', 92, 163, '#ffe9a8', 1);
-  for (i = 0; i < 2; i++) { s = art.fall[i]; blit(g, s, 92 + i * 22, ry - (s.h - 1), false); }
-  drawText(g, 'FLIP 1X', 148, 163, '#ffe9a8', 1);
-  for (i = 0; i < 6; i++) { s = art.tuck[i * 2]; blit(g, s, 148 + i * 20, ry - s.h + 8, false); }
+function runAudioCheck() {
+  reset(false);
+  state = 'play';
+  audio.init();
+  audio.resume();
+  audio.musicStart();
+  var l0 = 't0  ' + audio.bgmDebug();
+  setTimeout(function () {
+    var l1 = 't1  ' + audio.bgmDebug();
+    audio.musicPause();
+    var l2 = 'pause ' + audio.bgmDebug();
+    audio.musicPlay();
+    var l3 = 'resume ' + audio.bgmDebug();
+    audio.musicStop();
+    var l4 = 'stop ' + audio.bgmDebug();
+    render();
+    drawAudioReport([l0, l1, l2, l3, l4]);
+    document.title = 'AUDIO CHECK';
+  }, 1800);
 }
 
 function onKey(e, down) {
@@ -1232,7 +1121,12 @@ function onKey(e, down) {
   if (!down) return;
   if (code === 'KeyM') { audio.init(); audio.toggleMute(); }
   if (code === 'KeyR') startGame();
-  if (code === 'Escape' || code === 'KeyP') { if (state === 'play') paused = !paused; }
+  if (code === 'Escape' || code === 'KeyP') {
+    if (state === 'play') {
+      paused = !paused;
+      if (paused) audio.musicPause(); else audio.musicPlay();
+    }
+  }
 }
 document.addEventListener('keydown', function (e) { if (e.repeat) { if (e.code === 'Space' || e.code.indexOf('Arrow') === 0) e.preventDefault(); return; } onKey(e, true); });
 document.addEventListener('keyup', function (e) { onKey(e, false); });
@@ -1246,11 +1140,13 @@ cv.addEventListener('pointerdown', function (e) {
   else { input.down = true; if (state === 'play' && (player.state === 'run' || player.state === 'land')) doDrop(); }
 });
 cv.addEventListener('pointerup', function () { input.jumpHeld = false; });
-document.addEventListener('visibilitychange', function () { if (document.hidden && state === 'play') paused = true; });
-window.addEventListener('blur', function () { if (state === 'play') paused = true; });
+document.addEventListener('visibilitychange', function () { if (document.hidden && state === 'play') { paused = true; audio.musicPause(); } });
+window.addEventListener('blur', function () { if (state === 'play') { paused = true; audio.musicPause(); } });
 
 best = loadBest();
-if (MODE === 'sheet') {
+if (MODE === 'audio') {
+  runAudioCheck();
+} else if (MODE === 'sheet') {
   reset(false);
   runSheet();
   document.title = 'SHEET';

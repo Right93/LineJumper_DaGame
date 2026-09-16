@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>LINE JUMPER - character preview</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0913;overflow:hidden}
+  #wrap{position:fixed;inset:0;display:grid;place-items:center}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;background:#000;box-shadow:0 0 60px #000,0 0 0 1px #241d33}
+  #hint{position:fixed;left:50%;bottom:6px;transform:translateX(-50%);color:#6f6480;font:12px monospace}
+</style>
+</head>
+<body>
+<!-- Character preview harness: review animation states before wiring them into
+     the game loop. Not part of the build (see build.js). -->
+<div id="wrap"><canvas id="c"></canvas></div>
+<div id="hint">1-7 state &nbsp; left/right step &nbsp; space play &nbsp; [ ] rate &nbsp; t tail debug</div>
+<script src="src/core.js"></script>
+<script src="src/character.js"></script>
+<script src="src/preview.js"></script>
+</body>
+</html>

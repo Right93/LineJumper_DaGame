@@ -11,6 +11,8 @@ window.onerror = function (msg, src, line, col) {
 };
 
 var W = 384, H = 216;
+var SW = 520, SH = 360, VOX = 68, VOY = 96;
+var VH = 216;
 
 function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
 function lerp(a, b, t) { return a + (b - a) * t; }

@@ -3,8 +3,11 @@
    HUD, menus and input. */
 
 var cv = document.getElementById('c');
-cv.width = W; cv.height = H;
-var g = ctxOf(cv);
+cv.width = SW; cv.height = SH;
+var sceneG = ctxOf(cv);
+var viewC = newCanvas(W, H);
+var viewG = ctxOf(viewC);
+var g = viewG;
 var qs = new URLSearchParams(location.search);
 var MODE = qs.get('mode') || '';
 var SHOT = MODE === 'shot';
@@ -15,10 +18,10 @@ var ZOX = parseFloat(qs.get('ox') || '192');
 var ZOY = parseFloat(qs.get('oy') || '108');
 
 function resize() {
-  var s = Math.max(1, Math.floor(Math.min(window.innerWidth / W, window.innerHeight / H)));
-  if (s > 7) s = 7;
-  cv.style.width = (W * s) + 'px';
-  cv.style.height = (H * s) + 'px';
+  var s = Math.max(1, Math.floor(Math.min(window.innerWidth / SW, window.innerHeight / SH)));
+  if (s > 6) s = 6;
+  cv.style.width = (SW * s) + 'px';
+  cv.style.height = (SH * s) + 'px';
 }
 window.addEventListener('resize', resize);
 resize();
@@ -34,7 +37,8 @@ if (qs.get('scenery') && THEMES[qs.get('scenery')]) scenery = qs.get('scenery');
 if (!THEMES[scenery]) scenery = 'shitamachi';
 var art = buildArt(equippedOutfit);
 var city = buildCity(20240, scenery);
-var frameC = buildFrame(makeRng(9));
+var cabinC = buildCabin(makeRng(11));
+var sashC = buildSash(makeRng(9));
 var glassC = buildGlass(makeRng(5));
 
 
@@ -808,7 +812,7 @@ function drawGlassDyn() {
   g.save();
   g.translate(bx, -40);
   g.rotate(0.34);
-  g.globalAlpha = 0.032;
+  g.globalAlpha = 0.022;
   g.fillStyle = '#cfe4ff';
   g.fillRect(0, 0, 38, 420);
   g.globalAlpha = 0.02;
@@ -897,61 +901,83 @@ function drawTitle() {
   if (wardrobeMsgT > 0) drawTextCenter(g, wardrobeMsg, W / 2, 154, '#ffb0b0', 1);
 }
 
+var themePrev = {};
+function getThemePreview(id) {
+  if (!themePrev[id]) themePrev[id] = buildThemePreview(id);
+  return themePrev[id];
+}
+
 function drawCustomise() {
   g.globalAlpha = 0.97;
   g.fillStyle = '#0b0816';
-  g.fillRect(22, 14, W - 44, 188);
+  g.fillRect(18, 10, W - 36, 196);
   g.globalAlpha = 1;
-  rect(g, 22, 14, W - 44, 1, '#4a3f5e');
-  rect(g, 22, 201, W - 44, 1, '#4a3f5e');
-  drawTextCenter(g, 'CUSTOMISE', W / 2, 20, '#ffe9a8', 1);
-  drawSparkIcon(g, 236, 20);
-  drawText(g, '' + sparkBank, 247, 20, '#8ff0ff', 1);
+  rect(g, 18, 10, W - 36, 1, '#4a3f5e');
+  rect(g, 18, 205, W - 36, 1, '#4a3f5e');
+  drawTextCenter(g, 'CUSTOMISE', 60, 16, '#ffe9a8', 1);
+  drawSparkIcon(g, 300, 16);
+  drawText(g, '' + sparkBank, 311, 16, '#8ff0ff', 1);
 
-  drawText(g, 'CHARACTER', 30, 36, '#9fb6d8', 1);
+  drawText(g, 'CHARACTER', 26, 30, '#9fb6d8', 1);
   for (var i = 0; i < OUTFIT_IDS.length; i++) {
     var id = OUTFIT_IDS[i], of = OUTFITS[id];
-    var y = 48 + i * 18;
+    var y = 42 + i * 17;
     var owned = ownedOutfits.indexOf(id) >= 0;
     var eq = equippedOutfit === id;
     g.globalAlpha = eq ? 0.26 : 0.1;
     g.fillStyle = eq ? '#8ff0ff' : '#4a4060';
-    g.fillRect(26, y - 3, W - 52, 17);
+    g.fillRect(22, y - 3, 200, 15);
     g.globalAlpha = 1;
-    drawText(g, (i + 1) + '  ' + of.name, 32, y, eq ? '#ffffff' : '#cfe0f0', 1);
+    drawText(g, (i + 1) + ' ' + of.name, 27, y, eq ? '#ffffff' : '#cfe0f0', 1);
     var pal = outfitPalette(id);
-    rect(g, 104, y - 2, 12, 12, pal.C);
-    rect(g, 104, y - 2, 12, 1, '#0b0816');
+    rect(g, 108, y - 2, 10, 11, pal.C);
+    rect(g, 108, y - 2, 10, 1, '#0b0816');
     var hat = HATS[of.hat];
     for (var r = 0; r < hat.length; r++) {
       for (var c = 0; c < hat[r].length; c++) {
         var ch = hat[r][c];
         if (ch === '.') continue;
         var col = pal[ch];
-        if (col) { g.fillStyle = col; g.fillRect(120 + c * 3, y - 2 + r * 4, 3, 4); }
+        if (col) { g.fillStyle = col; g.fillRect(122 + c * 3, y - 2 + r * 4, 3, 4); }
       }
     }
-    var state = eq ? 'EQUIPPED' : (owned ? 'OWNED - PRESS ' + (i + 1) : of.price + ' SPARKS');
-    drawText(g, state, 152, y, eq ? '#9fffa8' : (owned ? '#cfe0f0' : '#ffd27a'), 1);
+    var state = eq ? 'EQUIPPED' : (owned ? 'OWNED' : of.price + ' SPARKS');
+    drawText(g, state, 156, y, eq ? '#9fffa8' : (owned ? '#cfe0f0' : '#ffd27a'), 1);
   }
 
-  drawText(g, 'BACKGROUND', 30, 112, '#9fb6d8', 1);
+  drawText(g, 'BACKGROUND', 26, 96, '#9fb6d8', 1);
   for (var k = 0; k < THEME_IDS.length; k++) {
     var tid = THEME_IDS[k], th = THEMES[tid];
-    var ty = 124 + k * 18;
+    var ty = 108 + k * 17;
     var sel = scenery === tid;
     g.globalAlpha = sel ? 0.26 : 0.1;
     g.fillStyle = sel ? '#8ff0ff' : '#4a4060';
-    g.fillRect(26, ty - 3, W - 52, 17);
+    g.fillRect(22, ty - 3, 200, 15);
     g.globalAlpha = 1;
-    drawText(g, (k + 4) + '  ' + th.name, 32, ty, sel ? '#ffffff' : '#cfe0f0', 1);
-    var sw = th.swatch || ['#333', '#555', '#777'];
-    for (var b = 0; b < 3; b++) rect(g, 196 + b * 12, ty - 2, 12, 12, sw[b]);
-    rect(g, 196, ty - 2, 36, 1, '#0b0816');
-    rect(g, 196, ty + 9, 36, 1, '#0b0816');
-    drawText(g, sel ? 'SELECTED' : 'PRESS ' + (k + 4), 240, ty, sel ? '#9fffa8' : '#cfe0f0', 1);
+    drawText(g, (k + 4) + ' ' + th.name, 27, ty, sel ? '#ffffff' : '#cfe0f0', 1);
+    drawText(g, sel ? 'SELECTED' : 'PRESS ' + (k + 4), 160, ty, sel ? '#9fffa8' : '#8f86a8', 1);
   }
-  drawTextCenter(g, '1-3 OUTFIT    4-6 BACKGROUND    C CLOSE', W / 2, 190, '#8f86a8', 1);
+
+  /* live previews */
+  drawText(g, 'PREVIEW', 236, 30, '#9fb6d8', 1);
+  var box = getThemePreview(scenery);
+  g.drawImage(box, 236, 40);
+  rect(g, 236, 40, 96, 1, '#0b0816');
+  rect(g, 236, 93, 96, 1, '#0b0816');
+  rect(g, 236, 40, 1, 54, '#0b0816');
+  rect(g, 331, 40, 1, 54, '#0b0816');
+  drawText(g, scenery.toUpperCase().slice(0, 15), 236, 98, '#cfe0f0', 1);
+  drawText(g, OUTFITS[equippedOutfit].name, 236, 180, '#cfe0f0', 1);
+  var f = Math.floor(T * 12) % 8;
+  var spr = art.run[f];
+  var px = 258, py = 174;
+  g.fillStyle = '#12101c';
+  g.fillRect(236, 106, 96, 70);
+  g.drawImage(spr.c, px, py - (spr.h - 1) * 2, spr.w * 2, spr.h * 2);
+  drawCane(px + 9 * 2 + 6, py - (spr.h - 1) * 2 + 32, 0.42, 1);
+  rect(g, 236, 106, 96, 1, '#2a2438');
+
+  drawTextCenter(g, '1-3 OUTFIT   4-6 BACKGROUND   C CLOSE', W / 2, 194, '#8f86a8', 1);
 }
 
 function drawOver() {
@@ -978,7 +1004,7 @@ function drawPause() {
   g.fillRect(WIN_L, WIN_T, W - WIN_L - WIN_R, H - WIN_T - WIN_B);
   g.globalAlpha = 1;
   drawTextCenterOutline(g, 'PAUSED', W / 2, 96, '#f2e8d4', '#140d18', 3);
-  drawTextCenter(g, 'ESC TO RESUME', W / 2, 126, '#b9a7c4', 1);
+  drawTextCenter(g, 'ESC TO RESUME    C CUSTOMISE', W / 2, 126, '#b9a7c4', 1);
 }
 
 function drawErrors() {
@@ -1028,13 +1054,18 @@ function render() {
   drawAtmosphere();
   drawGlassDyn();
   g.drawImage(glassC, 0, 0);
-  g.drawImage(frameC, 0, 0);
   drawHUD();
   if (state === 'title') drawTitle();
   if (state === 'over') drawOver();
   if (paused) drawPause();
   drawErrors();
-  if (ZOOM > 1) g.drawImage(cv, ZOX - W / (2 * ZOOM), ZOY - H / (2 * ZOOM), W / ZOOM, H / ZOOM, 0, 0, W, H);
+  if (ZOOM > 1) g.drawImage(viewC, ZOX - W / (2 * ZOOM), ZOY - H / (2 * ZOOM), W / ZOOM, H / ZOOM, 0, 0, W, H);
+  g = sceneG;
+  sceneG.clearRect(0, 0, SW, SH);
+  sceneG.drawImage(cabinC, 0, 0);
+  sceneG.drawImage(viewC, VOX, VOY);
+  sceneG.drawImage(sashC, 0, 0);
+  g = viewG;
 }
 
 function scriptedInput() {
@@ -1268,7 +1299,7 @@ function onKey(e, down) {
     return;
   }
   if (!down) return;
-  if (wardrobe && state === 'title') {
+  if (wardrobe && (state === 'title' || paused)) {
     if (code === 'Digit1') { equipOutfit(OUTFIT_IDS[0]); return; }
     if (code === 'Digit2') { equipOutfit(OUTFIT_IDS[1]); return; }
     if (code === 'Digit3') { equipOutfit(OUTFIT_IDS[2]); return; }
@@ -1284,7 +1315,7 @@ function onKey(e, down) {
     setScenery(THEME_IDS[(idx + 1) % THEME_IDS.length]);
     return;
   }
-  if (code === 'KeyC' && state === 'title') { wardrobe = !wardrobe; audio.ui(); return; }
+  if (code === 'KeyC' && (state === 'title' || paused)) { wardrobe = !wardrobe; audio.ui(); return; }
   if (code === 'KeyR') startGame();
   if (code === 'Escape' || code === 'KeyP') {
     if (state === 'play') {
@@ -1300,7 +1331,7 @@ cv.addEventListener('pointerdown', function (e) {
   audio.init(); audio.resume();
   if (state === 'title' || (state === 'over' && overT > 0.6)) { startGame(); return; }
   var r = cv.getBoundingClientRect();
-  var y = (e.clientY - r.top) / r.height;
+  var y = (((e.clientY - r.top) / r.height) * SH - VOY) / H;
   if (y < 0.62) { input.jump = true; input.jumpHeld = true; if (state === 'play') player.jumpBuf = JBUF; }
   else { input.down = true; if (state === 'play' && (player.state === 'run' || player.state === 'land')) doDrop(); }
 });

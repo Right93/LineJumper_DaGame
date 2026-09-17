@@ -379,55 +379,255 @@ function buildTunnel(rng) {
   return c;
 }
 
-function buildFrame(rng) {
-  var c = newCanvas(W, H), g = ctxOf(c);
-  var L = 20, T = 16, Rr = 20, Bo = 26;
-  g.fillStyle = '#14101a'; g.fillRect(0, 0, W, H);
-  g.fillStyle = '#1c1722';
-  g.fillRect(0, 0, W, 2); g.fillRect(0, 0, 2, H);
-  g.fillStyle = '#0b080f';
-  g.fillRect(0, H - 2, W, 2); g.fillRect(W - 2, 0, 2, H);
-  for (var i = 0; i < 90; i++) {
-    g.globalAlpha = 0.05 + rng.next() * 0.05;
-    g.fillStyle = rng.chance(0.5) ? '#000000' : '#3a3040';
-    var gx = rng.next() < 0.5 ? rng.int(0, L + 4) : rng.int(W - Rr - 4, W);
-    g.fillRect(gx, rng.int(0, H), rng.int(2, 9), rng.int(1, 4));
+/* ====================== train car interior + window ======================
+   The visible canvas is the inside of the carriage (SW x SH). The running
+   world is rendered into its own view canvas (W x H) and composited at
+   (VOX, VOY), sandwiched between two cabin layers:
+
+       cabinC   ceiling, luggage rack + bags, wall panelling, straps,
+                seat back, a passenger's arm, wall clutter
+       viewC    the running game (the glass)
+       sashC    window frame, rubber seal, sill, cup, ticket, scuffs
+
+   Everything decorative sits on the cabin/sash layers, i.e. OUTSIDE the
+   glass, so the gameplay area is never covered. */
+
+
+
+
+
+
+
+
+
+/* a hanging strap: webbing + grab loop */
+function strapHanger(g, x, y0, len, swing) {
+  g.save();
+  g.translate(x, y0);
+  g.rotate(swing || 0);
+  g.fillStyle = '#241f2c';
+  g.fillRect(-1, 0, 3, len);
+  g.fillStyle = '#3a3346';
+  g.fillRect(-1, 0, 1, len);
+  g.fillStyle = '#bdb8c8';
+  g.beginPath(); g.arc(0, len + 6, 5, 0, 7); g.fill();
+  g.fillStyle = '#15111c';
+  g.beginPath(); g.arc(0, len + 6, 3, 0, 7); g.fill();
+  g.restore();
+}
+
+function buildCabin(rng) {
+  var c = newCanvas(SW, SH), g = ctxOf(c);
+  var x, y, i;
+  /* ---- ceiling ---- */
+  gradRows(g, 0, 48, SW, [[0, '#0a0810'], [0.5, '#231b26'], [1, '#3a2c32']]);
+  rect(g, 150, 6, 220, 3, '#0e0b14');
+  g.fillStyle = '#ffeac4';
+  g.fillRect(154, 7, 212, 2);
+  softGlow(g, 260, 9, 30, '#ffe0b0', 0.22);
+  /* ---- luggage rack ---- */
+  rect(g, 0, 46, SW, 3, '#3a3346');
+  rect(g, 0, 46, SW, 1, '#5a5270');
+  g.globalAlpha = 0.5;
+  for (x = 0; x < SW; x += 7) rect(g, x, 49, 1, 30, '#2a2434');
+  g.globalAlpha = 1;
+  rect(g, 0, 78, SW, 2, '#2a2434');
+  /* bags on the rack */
+  g.fillStyle = '#2e2a3c';
+  blob(g, 108, 62, 62, 30, '#2e2a3c');
+  rect(g, 80, 62, 56, 16, '#262234');
+  rect(g, 80, 74, 56, 4, '#1a1726');
+  g.fillStyle = '#4a4260';
+  rect(g, 84, 58, 10, 6, '#4a4260');
+  rect(g, 132, 58, 8, 6, '#4a4260');
+  g.fillStyle = '#1a1626';
+  rect(g, 352, 44, 74, 34, '#1a1626');
+  rect(g, 352, 44, 74, 6, '#2e2840');
+  rect(g, 384, 50, 10, 22, '#2e2840');
+  rect(g, 360, 78, 58, 3, '#100d1c');
+  /* ---- wall panelling ---- */
+  gradRows(g, 48, SH, SW, [[0, '#4c3a30'], [0.35, '#5c483a'], [0.72, '#40302a'], [1, '#241b1c']]);
+  g.globalAlpha = 0.16;
+  for (y = 54; y < SH; y += 28) rect(g, 0, y, SW, 1, '#180f12');
+  g.globalAlpha = 1;
+  for (i = 0; i < 320; i++) {
+    g.globalAlpha = 0.04 + rng.next() * 0.06;
+    g.fillStyle = rng.chance(0.5) ? '#000000' : '#c8a888';
+    g.fillRect(rng.int(0, SW), rng.int(48, SH), rng.int(2, 14), 1);
     g.globalAlpha = 1;
   }
-  g.save();
-  g.globalCompositeOperation = 'destination-out';
-  roundRectPath(g, L, T, W - L - Rr, H - T - Bo, 10);
-  g.fill();
-  g.restore();
-  g.strokeStyle = '#2e2736';
-  g.lineWidth = 1;
-  roundRectPath(g, L - 0.5, T - 0.5, W - L - Rr + 1, H - T - Bo + 1, 10);
-  g.stroke();
-  g.strokeStyle = '#070509';
-  roundRectPath(g, L + 1.5, T + 1.5, W - L - Rr - 3, H - T - Bo - 3, 9);
-  g.stroke();
-  var rivets = [];
-  for (var rx = L + 12; rx < W - Rr - 6; rx += 46) { rivets.push([rx, 7]); rivets.push([rx + 22, H - 13]); }
-  for (var ry = T + 14; ry < H - Bo - 6; ry += 46) { rivets.push([9, ry]); rivets.push([W - 10, ry + 20]); }
-  for (var r = 0; r < rivets.length; r++) {
-    g.fillStyle = '#0a0710'; g.fillRect(rivets[r][0], rivets[r][1], 3, 3);
-    g.fillStyle = '#3d3348'; g.fillRect(rivets[r][0], rivets[r][1], 2, 1);
+  rect(g, 50, 48, 2, SH - 48, '#2a1e1c');
+  rect(g, SW - 52, 48, 2, SH - 48, '#2a1e1c');
+  /* warm pools of light from the ceiling */
+  for (y = 48; y < SH - 30; y += 2) {
+    g.globalAlpha = 0.09 * (1 - (y - 48) / (SH - 78));
+    g.fillStyle = '#ffd8a0';
+    g.fillRect(0, y, 50, 1);
+    g.fillRect(SW - 50, y, 50, 1);
+    g.globalAlpha = 1;
   }
-  g.fillStyle = '#241d2b'; g.fillRect(L - 4, H - Bo + 4, W - L - Rr + 8, 5);
-  g.fillStyle = '#3a3145'; g.fillRect(L - 4, H - Bo + 4, W - L - Rr + 8, 1);
-  g.fillStyle = '#0e0a14'; g.fillRect(0, H - Bo + 9, W, H);
-  var cx = 66, cy = H - Bo + 2;
-  g.fillStyle = '#2a2028'; g.fillRect(cx, cy - 9, 9, 9);
-  g.fillStyle = '#e6dcc8'; g.fillRect(cx + 1, cy - 8, 7, 8);
-  g.fillStyle = '#c9bda4'; g.fillRect(cx + 1, cy - 8, 2, 8);
-  g.fillStyle = '#a8503a'; g.fillRect(cx + 1, cy - 11, 7, 3);
-  g.fillStyle = '#c26a4c'; g.fillRect(cx + 1, cy - 11, 7, 1);
-  g.globalAlpha = 0.5;
-  g.fillStyle = '#cbbfae';
-  g.fillRect(cx + 3, cy - 13, 1, 2);
-  g.fillRect(cx + 5, cy - 15, 1, 2);
+  /* armrest horn + seat back (the bench we are sitting on) */
+  rect(g, 0, SH - 34, SW, 3, '#2f2637');
+  gradRows(g, SH - 31, SH, SW, [[0, '#4a3a54'], [0.5, '#382c44'], [1, '#241c30']]);
+  for (x = 8; x < SW; x += 15) {
+    g.globalAlpha = 0.18;
+    g.fillStyle = '#100c18';
+    g.fillRect(x, SH - 28, 1, 26);
+    g.globalAlpha = 1;
+  }
+  g.globalAlpha = 0.35;
+  g.fillStyle = '#0a0710';
+  g.fillRect(0, SH - 7, SW, 7);
   g.globalAlpha = 1;
-  dressWindow(g, rng);
+  /* ---- a passenger beside us: forearm resting on the seat back ---- */
+  g.save();
+  g.translate(SW - 74, SH - 34);
+  g.rotate(-0.1);
+  g.fillStyle = '#1d1a26';
+  g.fillRect(-6, -10, 74, 22);
+  g.fillStyle = '#272233';
+  g.fillRect(-6, -10, 74, 2);
+  g.fillStyle = '#14111c';
+  g.fillRect(58, -12, 26, 26);
+  g.fillStyle = '#d8a888';
+  g.fillRect(74, -8, 16, 16);
+  g.fillStyle = '#b88a6a';
+  g.fillRect(74, 4, 16, 4);
+  g.fillStyle = '#2a2434';
+  g.fillRect(-10, 6, 60, 14);
+  g.restore();
+  /* a bento and a can on the seat next to us */
+  rect(g, 26, SH - 40, 30, 14, '#1c1826');
+  rect(g, 28, SH - 38, 26, 10, '#c8b088');
+  rect(g, 28, SH - 38, 26, 3, '#8a5a3c');
+  rect(g, 44, SH - 36, 8, 6, '#e0cfa8');
+  rect(g, 66, SH - 36, 12, 16, '#4a6a7a');
+  rect(g, 68, SH - 34, 8, 12, '#5f8595');
+  /* ---- wall clutter, on the panelling either side of the window ---- */
+  drawPoster(g, 8, 104, 38, 78, '#3a2830', '#191218', '#9a7a70', rng, true);
+  drawPoster(g, SW - 46, 116, 38, 68, '#242c3c', '#12161f', '#8b9cb2', rng, false);
+  g.globalAlpha = 0.6;
+  drawText(g, 'HOSHI', SW - 41, 122, '#cdd8e6', 1);
+  drawText(g, 'COLA', SW - 40, 130, '#cdd8e6', 1);
+  g.globalAlpha = 1;
+  g.fillStyle = '#5c6678';
+  g.fillRect(SW - 40, 138, 26, 1);
+  g.fillRect(SW - 40, 142, 18, 1);
+  /* car plate */
+  rect(g, 10, 62, 30, 14, '#1a1418');
+  rect(g, 11, 63, 28, 12, '#d8cbb0');
+  drawText(g, 'CAR', 13, 65, '#3a2c28', 1);
+  drawText(g, '3', 21, 65, '#a8483c', 1);
+  /* mascot sticker on the wall below the poster */
+  var m = compile(MASCOT, {
+    'W': '#f2f5f8', 'B': '#3fb0c0', 'b': '#2a8898', 'Y': '#ffd98c',
+    'K': '#20202c', 'H': '#3a3a4c', 'S': '#e8b48c'
+  });
+  g.globalAlpha = 0.85;
+  g.drawImage(m.c, 14, 192);
+  g.globalAlpha = 1;
+  /* corner vignette so the window reads as the bright element */
+  var vg = g.createRadialGradient(SW / 2, SH / 2, 120, SW / 2, SH / 2, 330);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(4,2,8,0.55)');
+  g.fillStyle = vg;
+  g.fillRect(0, 0, SW, SH);
+  return c;
+}
+
+function buildSash(rng) {
+  var c = newCanvas(SW, SH), g = ctxOf(c);
+  var L = VOX - 22, T = VOY - 22, RR = VOX + W + 22, BB = VOY + H + 26;
+  g.fillStyle = '#171320';
+  roundRectPath(g, L - 12, T - 12, (RR - L) + 24, (BB - T) + 24, 18);
+  g.fill();
+  g.fillStyle = '#241d2c';
+  g.fillRect(L - 12, T - 12, (RR - L) + 24, 4);
+  g.fillRect(L - 12, T - 12, 4, (BB - T) + 24);
+  g.globalCompositeOperation = 'destination-out';
+  roundRectPath(g, VOX - 2, VOY - 2, W + 4, H + 4, 10);
+  g.fill();
+  g.globalCompositeOperation = 'source-over';
+  g.strokeStyle = '#0a0810';
+  g.lineWidth = 3;
+  roundRectPath(g, VOX - 3, VOY - 3, W + 6, H + 6, 11);
+  g.stroke();
+  g.strokeStyle = '#3a3346';
+  g.lineWidth = 1;
+  roundRectPath(g, L + 2, T + 2, (RR - L) - 4, (BB - T) - 4, 12);
+  g.stroke();
+  var i, rx, ry;
+  for (rx = L + 10; rx < RR - 6; rx += 52) {
+    for (ry = T + 10; ry < BB - 6; ry += 64) {
+      g.fillStyle = '#0a0710';
+      g.fillRect(rx, ry, 3, 3);
+      g.fillStyle = '#4a4058';
+      g.fillRect(rx, ry, 2, 1);
+    }
+  }
+  for (i = 0; i < 90; i++) {
+    g.globalAlpha = 0.05 + rng.next() * 0.06;
+    g.fillStyle = rng.chance(0.5) ? '#000000' : '#5a4a58';
+    var side = rng.int(0, 3);
+    if (side === 0) g.fillRect(rng.int(L - 10, VOX), rng.int(T - 10, BB + 10), rng.int(2, 10), rng.int(1, 4));
+    else if (side === 1) g.fillRect(rng.int(VOX + W, RR + 10), rng.int(T - 10, BB + 10), rng.int(2, 10), rng.int(1, 4));
+    else g.fillRect(rng.int(L - 10, RR + 10), rng.int(T - 10, VOY), rng.int(2, 10), rng.int(1, 4));
+    g.globalAlpha = 1;
+  }
+  rect(g, L - 16, BB, (RR - L) + 32, 12, '#2a2231');
+  rect(g, L - 16, BB, (RR - L) + 32, 3, '#3e3448');
+  rect(g, L - 16, BB + 12, (RR - L) + 32, 2, '#120e18');
+  /* ticket stub tucked into the seal */
+  g.fillStyle = '#1a1520';
+  g.fillRect(92, BB - 9, 30, 13);
+  g.fillStyle = '#e8dcc4';
+  g.fillRect(93, BB - 8, 28, 11);
+  g.fillStyle = '#b8484a';
+  g.fillRect(93, BB - 8, 28, 2);
+  g.fillStyle = '#c9bda4';
+  g.fillRect(96, BB - 5, 20, 1);
+  g.fillRect(96, BB - 2, 13, 1);
+  g.fillStyle = '#1a1520';
+  g.fillRect(118, BB - 5, 2, 2);
+  /* paper cup on the sill */
+  var cx2 = L + 6, cy2 = BB - 1;
+  g.fillStyle = '#2a2028'; g.fillRect(cx2, cy2 - 11, 11, 11);
+  g.fillStyle = '#e6dcc8'; g.fillRect(cx2 + 1, cy2 - 10, 9, 10);
+  g.fillStyle = '#c9bda4'; g.fillRect(cx2 + 1, cy2 - 10, 2, 10);
+  g.fillStyle = '#a8503a'; g.fillRect(cx2 + 1, cy2 - 13, 9, 3);
+  g.fillStyle = '#c26a4c'; g.fillRect(cx2 + 1, cy2 - 13, 9, 1);
+  g.globalAlpha = 0.45;
+  g.fillStyle = '#cbbfae';
+  g.fillRect(cx2 + 3, cy2 - 15, 1, 2);
+  g.fillRect(cx2 + 6, cy2 - 17, 1, 2);
+  g.globalAlpha = 1;
+  g.globalAlpha = 0.12;
+  for (i = 0; i < 30; i++) {
+    g.fillStyle = rng.chance(0.5) ? '#000000' : '#6a6070';
+    var sx = rng.chance(0.5) ? rng.int(L - 10, VOX - 2) : rng.int(VOX + W + 2, RR + 10);
+    g.fillRect(sx, rng.int(T, BB), rng.int(3, 10), 1);
+  }
+  g.globalAlpha = 1;
+  /* straps hang between the seat and the glass, in front of the frame */
+  strapHanger(g, 214, 44, 30, -0.05);
+  strapHanger(g, 286, 44, 26, 0.05);
+  strapHanger(g, 358, 44, 32, -0.03);
+  return c;
+}
+
+/* short preview strip of a theme for the customise screen */
+function buildThemePreview(themeId) {
+  var th = THEMES[themeId] || THEMES.shitamachi;
+  var pw = 96, ph = 54;
+  var c = newCanvas(pw, ph), g = ctxOf(c);
+  var rng = makeRng(4242);
+  var sky = th.sky(rng), far = th.far(rng), mid = th.mid(rng), near = th.near(rng), gr = th.ground(rng);
+  g.drawImage(sky, 0, 0, W, 216, 0, 0, pw, ph);
+  g.drawImage(far, 0, 0, 420, 216, 0, 0, pw, ph);
+  g.drawImage(mid.c, 0, 0, 380, 216, 0, 0, pw, ph);
+  g.drawImage(near, 0, 0, 300, 216, 0, 0, pw, ph);
+  g.drawImage(gr, 0, 0, 300, 30, 0, ph - 12, pw, 12);
+  rect(g, 0, ph - 1, pw, 1, '#0b0816');
   return c;
 }
 
@@ -442,7 +642,7 @@ function buildGlass(rng) {
   grd.addColorStop(1, 'rgba(3,2,8,0.5)');
   g.fillStyle = grd;
   g.fillRect(0, 0, W, H);
-  g.fillStyle = 'rgba(150,180,220,0.05)';
+  g.fillStyle = 'rgba(150,180,220,0.022)';
   g.fillRect(0, 0, W, H);
   for (var i = 0; i < 90; i++) {
     g.globalAlpha = 0.03 + rng.next() * 0.08;
@@ -969,50 +1169,7 @@ function drawPoster(g, x, y, w, h, bg, ink, mid, rng, withFigure) {
   tornEdge(g, x, y, w, h, rng, rng.chance(0.5) ? 'right' : 'bottom');
 }
 
-function dressWindow(g, rng) {
-  /* torn poster fragment on the left interior wall, figure falling */
-  drawPoster(g, 2, 62, 17, 48, '#3a2830', '#191218', '#9a7a70', rng, true);
-  /* weathered advert fragment on the right wall, invented branding */
-  drawPoster(g, W - 19, 98, 17, 42, '#242c3c', '#12161f', '#8b9cb2', rng, false);
-  g.globalAlpha = 0.62;
-  drawText(g, 'HOSHI', W - 17, 102, '#cdd8e6', 1);
-  drawText(g, 'COLA', W - 16, 109, '#cdd8e6', 1);
-  g.globalAlpha = 1;
-  g.fillStyle = '#5c6678';
-  g.fillRect(W - 16, 116, 11, 1);
-  g.fillRect(W - 16, 119, 8, 1);
-  /* ticket stub tucked into the sill seal */
-  g.fillStyle = '#1a1520';
-  g.fillRect(136, 185, 26, 11);
-  g.fillStyle = '#e8dcc4';
-  g.fillRect(137, 186, 24, 9);
-  g.fillStyle = '#b8484a';
-  g.fillRect(137, 186, 24, 2);
-  g.fillStyle = '#c9bda4';
-  g.fillRect(140, 189, 18, 1);
-  g.fillRect(140, 192, 12, 1);
-  g.fillStyle = '#1a1520';
-  g.fillRect(158, 189, 2, 2);
-  /* mascot sticker on the glass */
-  var m = compile(MASCOT, {
-    'W': '#f2f5f8', 'B': '#3fb0c0', 'b': '#2a8898', 'Y': '#ffd98c',
-    'K': '#20202c', 'H': '#3a3a4c', 'S': '#e8b48c'
-  });
-  g.globalAlpha = 0.62;
-  g.drawImage(m.c, 40, 132);
-  g.globalAlpha = 0.16;
-  g.fillStyle = '#ffffff';
-  g.fillRect(40, 132, m.w, 1);
-  g.globalAlpha = 1;
-  /* scuffs and wear on the frame */
-  g.globalAlpha = 0.14;
-  for (var i = 0; i < 26; i++) {
-    g.fillStyle = rng.chance(0.5) ? '#000000' : '#6a6070';
-    var sx = rng.chance(0.5) ? rng.int(2, 18) : rng.int(W - 20, W - 4);
-    g.fillRect(sx, rng.int(20, 186), rng.int(3, 9), 1);
-  }
-  g.globalAlpha = 1;
-}
+
 
 function buildCity(seed, themeId) {
   var th = THEMES[themeId] || THEMES.shitamachi;

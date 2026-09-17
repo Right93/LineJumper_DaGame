@@ -29,6 +29,12 @@ var HATS = {
     '...KHHHK......',
     '..KHHHHHK.....',
     '..KKKKKKK.....'
+  ],
+  shinobi: [
+    '..RRRRRRRRRR..',
+    '..RHhHhHhHR...',
+    '..RKSSKSSKR...',
+    '..RKKKKKKKKR..'
   ]
 };
 
@@ -55,9 +61,18 @@ var OUTFITS = {
       'C': '#8d9a62', 'c': '#717d50', 'd': '#58623d',
       'P': '#3a3a2c', 'p': '#28281e', 'W': '#5a4030', 'Q': '#8a6a44'
     }
+  },
+  ninja: {
+    name: 'NINJA', price: 1200, hat: 'shinobi',
+    pal: {
+      'A': '#3a3a54', 'H': '#242433', 'h': '#343448',
+      'C': '#33334c', 'c': '#262636', 'd': '#1b1b26',
+      'P': '#23232e', 'p': '#17171f', 'W': '#12101a', 'Q': '#46465e',
+      'S': '#efc49c', 's': '#d8a87e', 'R': '#c03a3a', 'r': '#7c2330'
+    }
   }
 };
-var OUTFIT_IDS = ['detective', 'nightwatch', 'verdant'];
+var OUTFIT_IDS = ['detective', 'nightwatch', 'verdant', 'ninja'];
 
 var BODY_REST = [
   '....KSsSK.....',

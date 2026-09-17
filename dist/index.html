@@ -215,6 +215,12 @@ var HATS = {
     '...KHHHK......',
     '..KHHHHHK.....',
     '..KKKKKKK.....'
+  ],
+  shinobi: [
+    '..RRRRRRRRRR..',
+    '..RHhHhHhHR...',
+    '..RKSSKSSKR...',
+    '..RKKKKKKKKR..'
   ]
 };
 
@@ -241,9 +247,18 @@ var OUTFITS = {
       'C': '#8d9a62', 'c': '#717d50', 'd': '#58623d',
       'P': '#3a3a2c', 'p': '#28281e', 'W': '#5a4030', 'Q': '#8a6a44'
     }
+  },
+  ninja: {
+    name: 'NINJA', price: 1200, hat: 'shinobi',
+    pal: {
+      'A': '#3a3a54', 'H': '#242433', 'h': '#343448',
+      'C': '#33334c', 'c': '#262636', 'd': '#1b1b26',
+      'P': '#23232e', 'p': '#17171f', 'W': '#12101a', 'Q': '#46465e',
+      'S': '#efc49c', 's': '#d8a87e', 'R': '#c03a3a', 'r': '#7c2330'
+    }
   }
 };
-var OUTFIT_IDS = ['detective', 'nightwatch', 'verdant'];
+var OUTFIT_IDS = ['detective', 'nightwatch', 'verdant', 'ninja'];
 
 var BODY_REST = [
   '....KSsSK.....',
@@ -1538,24 +1553,33 @@ function buildFieldMid(rng) {
 
 function buildFieldNear(rng) {
   var TW = 768, c = newCanvas(TW, H), g = ctxOf(c);
-  var i;
-  for (i = 0; i < 26; i++) {
-    var x = rng.int(0, TW), w = rng.int(30, 90);
-    g.fillStyle = rng.pick(['#5a7a48', '#4e6c40', '#66854e']);
-    for (var b = 0; b < 3; b++) g.fillRect(x, 190 + b * 8, w, 8);
+  var top = 140, i, r, x;
+  for (var y = top; y < H; y++) {
+    var t = (y - top) / (H - top - 1);
+    g.fillStyle = lerpColor('#c6a35a', '#51604a', t);
+    g.fillRect(0, y, TW, 1);
   }
-  for (i = 0; i < 90; i++) {
-    var gx = rng.int(0, TW), gy = rng.int(182, 214);
+  for (r = 0; r < 9; r++) {
+    var ry = top + 7 + r * 8;
+    g.globalAlpha = 0.24 + r * 0.05;
+    g.fillStyle = r % 2 ? '#8fae64' : '#a38b4e';
+    for (x = 0; x < TW; x += 12) {
+      g.fillRect(x, ry, 8, 2 + (r % 2) + (r >= 7 ? 2 : 0));
+    }
+    g.globalAlpha = 1;
+  }
+  for (i = 0; i < 80; i++) {
+    var gx = rng.int(0, TW), gy = rng.int(top + 8, 214);
     g.fillStyle = rng.pick(['#6f8f52', '#7fa05c', '#54704a']);
     g.fillRect(gx, gy, 2, 6);
     g.fillRect(gx + rng.int(-2, 2), gy + 2, 1, 4);
   }
   for (i = 0; i < 5; i++) {
-    var fx2 = rng.int(0, TW), fw2 = rng.int(40, 90);
+    var fx = rng.int(0, TW), fw = rng.int(40, 90);
     g.fillStyle = '#7a6a50';
-    g.fillRect(fx2, 186, fw2, 3);
-    g.fillRect(fx2 + 4, 189, 3, 12);
-    g.fillRect(fx2 + fw2 - 8, 189, 3, 12);
+    g.fillRect(fx, 180, fw, 3);
+    g.fillRect(fx + 4, 183, 3, 12);
+    g.fillRect(fx + fw - 8, 183, 3, 12);
   }
   return c;
 }
@@ -1704,32 +1728,41 @@ function buildLakeMid(rng) {
 
 function buildLakeNear(rng) {
   var TW = 768, c = newCanvas(TW, H), g = ctxOf(c);
-  var i;
-  for (i = 0; i < 30; i++) {
-    var x = rng.int(0, TW), s = rng.int(14, 30);
+  var top = 136, i, x;
+  for (var y = top; y < H; y++) {
+    var t = (y - top) / (H - top - 1);
+    g.fillStyle = lerpColor('#2c4a5e', '#18293a', t);
+    g.fillRect(0, y, TW, 1);
+  }
+  for (i = 0; i < 46; i++) {
+    g.globalAlpha = 0.1 + rng.next() * 0.16;
+    g.fillStyle = '#cfe4ec';
+    g.fillRect(rng.int(0, TW), rng.int(top + 4, 214), rng.int(6, 30), 1);
+    g.globalAlpha = 1;
+  }
+  for (i = 0; i < 28; i++) {
+    x = rng.int(0, TW);
+    var s = rng.int(14, 30), ry2 = rng.int(186, 204);
     g.fillStyle = '#2c3e3a';
-    g.fillRect(x, 190, 2, 26);
+    g.fillRect(x, ry2, 2, 22);
     g.beginPath();
-    g.moveTo(x - s / 2, 192);
-    g.lineTo(x + 1, 192 - s);
-    g.lineTo(x + s / 2, 192);
+    g.moveTo(x - s / 2, ry2 + 2);
+    g.lineTo(x + 1, ry2 + 2 - s);
+    g.lineTo(x + s / 2, ry2 + 2);
     g.closePath(); g.fill();
     g.fillStyle = '#354c42';
     g.beginPath();
-    g.moveTo(x - s / 3, 196);
-    g.lineTo(x + 1, 196 - s * 0.8);
-    g.lineTo(x + s / 3, 196);
+    g.moveTo(x - s / 3, ry2 + 6);
+    g.lineTo(x + 1, ry2 + 6 - s * 0.8);
+    g.lineTo(x + s / 3, ry2 + 6);
     g.closePath(); g.fill();
   }
   for (i = 0; i < 50; i++) {
-    var gx = rng.int(0, TW), gy = rng.int(186, 214);
+    var gx = rng.int(0, TW), gy = rng.int(182, 214);
     g.fillStyle = rng.pick(['#3e5a48', '#31504a', '#4a6650']);
     g.fillRect(gx, gy, 1, rng.int(4, 10));
   }
-  for (i = 0; i < 6; i++) {
-    var bx = rng.int(0, TW), bw = rng.int(20, 46);
-    blob(g, bx, 208, bw, 14, '#3a4448');
-  }
+  for (i = 0; i < 8; i++) blob(g, rng.int(0, TW), 206, rng.int(20, 46), 12, '#3a4448');
   return c;
 }
 
@@ -2936,8 +2969,6 @@ function drawTitle() {
   drawText(g, 'OUTFIT ' + (ow ? ow.name : '?'), 30, 46, '#8f86a8', 1);
   drawText(g, '[C] CUSTOMISE', 30, 56, '#6f6480', 1);
   drawText(g, '[V] NEXT BACKGROUND', 30, 66, '#6f6480', 1);
-  if (wardrobe) drawCustomise();
-  if (wardrobeMsgT > 0) drawTextCenter(g, wardrobeMsg, W / 2, 154, '#ffb0b0', 1);
 }
 
 var themePrev = {};
@@ -2984,17 +3015,17 @@ function drawCustomise() {
     drawText(g, state, 156, y, eq ? '#9fffa8' : (owned ? '#cfe0f0' : '#ffd27a'), 1);
   }
 
-  drawText(g, 'BACKGROUND', 26, 96, '#9fb6d8', 1);
+  drawText(g, 'BACKGROUND', 26, 112, '#9fb6d8', 1);
   for (var k = 0; k < THEME_IDS.length; k++) {
     var tid = THEME_IDS[k], th = THEMES[tid];
-    var ty = 108 + k * 17;
+    var ty = 124 + k * 17;
     var sel = scenery === tid;
     g.globalAlpha = sel ? 0.26 : 0.1;
     g.fillStyle = sel ? '#8ff0ff' : '#4a4060';
     g.fillRect(22, ty - 3, 200, 15);
     g.globalAlpha = 1;
-    drawText(g, (k + 4) + ' ' + th.name, 27, ty, sel ? '#ffffff' : '#cfe0f0', 1);
-    drawText(g, sel ? 'SELECTED' : 'PRESS ' + (k + 4), 160, ty, sel ? '#9fffa8' : '#8f86a8', 1);
+    drawText(g, (k + 5) + ' ' + th.name, 27, ty, sel ? '#ffffff' : '#cfe0f0', 1);
+    drawText(g, sel ? 'SELECTED' : 'PRESS ' + (k + 5), 160, ty, sel ? '#9fffa8' : '#8f86a8', 1);
   }
 
   /* live previews */
@@ -3016,7 +3047,7 @@ function drawCustomise() {
   drawCane(px + 9 * 2 + 6, py - (spr.h - 1) * 2 + 32, 0.42, 1);
   rect(g, 236, 106, 96, 1, '#2a2438');
 
-  drawTextCenter(g, '1-3 OUTFIT   4-6 BACKGROUND   C CLOSE', W / 2, 194, '#8f86a8', 1);
+  drawTextCenter(g, '1-4 OUTFIT   5-7 BACKGROUND   C CLOSE', W / 2, 194, '#8f86a8', 1);
 }
 
 function drawOver() {
@@ -3106,6 +3137,8 @@ function render() {
   if (state === 'title') drawTitle();
   if (state === 'over') drawOver();
   if (paused) drawPause();
+  if (wardrobe) drawCustomise();
+  if (wardrobeMsgT > 0) drawTextCenter(g, wardrobeMsg, W / 2, 154, '#ffb0b0', 1);
   drawErrors();
   if (ZOOM > 1) g.drawImage(viewC, ZOX - W / (2 * ZOOM), ZOY - H / (2 * ZOOM), W / ZOOM, H / ZOOM, 0, 0, W, H);
   compositeScene();
@@ -3330,9 +3363,10 @@ function onKey(e, down) {
     if (code === 'Digit1') { equipOutfit(OUTFIT_IDS[0]); return; }
     if (code === 'Digit2') { equipOutfit(OUTFIT_IDS[1]); return; }
     if (code === 'Digit3') { equipOutfit(OUTFIT_IDS[2]); return; }
-    if (code === 'Digit4') { setScenery(THEME_IDS[0]); return; }
-    if (code === 'Digit5') { setScenery(THEME_IDS[1]); return; }
-    if (code === 'Digit6') { setScenery(THEME_IDS[2]); return; }
+    if (code === 'Digit4') { equipOutfit(OUTFIT_IDS[3]); return; }
+    if (code === 'Digit5') { setScenery(THEME_IDS[0]); return; }
+    if (code === 'Digit6') { setScenery(THEME_IDS[1]); return; }
+    if (code === 'Digit7') { setScenery(THEME_IDS[2]); return; }
     if (code === 'KeyC' || code === 'Escape') { wardrobe = false; audio.ui(); return; }
     return;
   }

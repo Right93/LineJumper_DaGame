@@ -77,7 +77,7 @@ rect, pixel, roundRectPath, lerpColor` · the 3×5 pixel font (`FONT`,
 `drawText*`, `textW`). No side effects.
 
 ### character.js
-- `PP` base palette, `HATS` (bowler/trilby/flatcap), `OUTFITS` + `OUTFIT_IDS`,
+- `PP` base palette, `HATS` (bowler/trilby/flatcap/shinobi), `OUTFITS` + `OUTFIT_IDS`,
   `outfitPalette(id)`.
 - Sprite rig: `BODY_REST` (constant torso/head rows) + `LEG_SHAPES` (8 leg
   poses) + `RUN_LEGS` (8-step cycle table) merged by `composeRun(body)` and

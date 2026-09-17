@@ -897,8 +897,6 @@ function drawTitle() {
   drawText(g, 'OUTFIT ' + (ow ? ow.name : '?'), 30, 46, '#8f86a8', 1);
   drawText(g, '[C] CUSTOMISE', 30, 56, '#6f6480', 1);
   drawText(g, '[V] NEXT BACKGROUND', 30, 66, '#6f6480', 1);
-  if (wardrobe) drawCustomise();
-  if (wardrobeMsgT > 0) drawTextCenter(g, wardrobeMsg, W / 2, 154, '#ffb0b0', 1);
 }
 
 var themePrev = {};
@@ -945,17 +943,17 @@ function drawCustomise() {
     drawText(g, state, 156, y, eq ? '#9fffa8' : (owned ? '#cfe0f0' : '#ffd27a'), 1);
   }
 
-  drawText(g, 'BACKGROUND', 26, 96, '#9fb6d8', 1);
+  drawText(g, 'BACKGROUND', 26, 112, '#9fb6d8', 1);
   for (var k = 0; k < THEME_IDS.length; k++) {
     var tid = THEME_IDS[k], th = THEMES[tid];
-    var ty = 108 + k * 17;
+    var ty = 124 + k * 17;
     var sel = scenery === tid;
     g.globalAlpha = sel ? 0.26 : 0.1;
     g.fillStyle = sel ? '#8ff0ff' : '#4a4060';
     g.fillRect(22, ty - 3, 200, 15);
     g.globalAlpha = 1;
-    drawText(g, (k + 4) + ' ' + th.name, 27, ty, sel ? '#ffffff' : '#cfe0f0', 1);
-    drawText(g, sel ? 'SELECTED' : 'PRESS ' + (k + 4), 160, ty, sel ? '#9fffa8' : '#8f86a8', 1);
+    drawText(g, (k + 5) + ' ' + th.name, 27, ty, sel ? '#ffffff' : '#cfe0f0', 1);
+    drawText(g, sel ? 'SELECTED' : 'PRESS ' + (k + 5), 160, ty, sel ? '#9fffa8' : '#8f86a8', 1);
   }
 
   /* live previews */
@@ -977,7 +975,7 @@ function drawCustomise() {
   drawCane(px + 9 * 2 + 6, py - (spr.h - 1) * 2 + 32, 0.42, 1);
   rect(g, 236, 106, 96, 1, '#2a2438');
 
-  drawTextCenter(g, '1-3 OUTFIT   4-6 BACKGROUND   C CLOSE', W / 2, 194, '#8f86a8', 1);
+  drawTextCenter(g, '1-4 OUTFIT   5-7 BACKGROUND   C CLOSE', W / 2, 194, '#8f86a8', 1);
 }
 
 function drawOver() {
@@ -1067,6 +1065,8 @@ function render() {
   if (state === 'title') drawTitle();
   if (state === 'over') drawOver();
   if (paused) drawPause();
+  if (wardrobe) drawCustomise();
+  if (wardrobeMsgT > 0) drawTextCenter(g, wardrobeMsg, W / 2, 154, '#ffb0b0', 1);
   drawErrors();
   if (ZOOM > 1) g.drawImage(viewC, ZOX - W / (2 * ZOOM), ZOY - H / (2 * ZOOM), W / ZOOM, H / ZOOM, 0, 0, W, H);
   compositeScene();
@@ -1291,9 +1291,10 @@ function onKey(e, down) {
     if (code === 'Digit1') { equipOutfit(OUTFIT_IDS[0]); return; }
     if (code === 'Digit2') { equipOutfit(OUTFIT_IDS[1]); return; }
     if (code === 'Digit3') { equipOutfit(OUTFIT_IDS[2]); return; }
-    if (code === 'Digit4') { setScenery(THEME_IDS[0]); return; }
-    if (code === 'Digit5') { setScenery(THEME_IDS[1]); return; }
-    if (code === 'Digit6') { setScenery(THEME_IDS[2]); return; }
+    if (code === 'Digit4') { equipOutfit(OUTFIT_IDS[3]); return; }
+    if (code === 'Digit5') { setScenery(THEME_IDS[0]); return; }
+    if (code === 'Digit6') { setScenery(THEME_IDS[1]); return; }
+    if (code === 'Digit7') { setScenery(THEME_IDS[2]); return; }
     if (code === 'KeyC' || code === 'Escape') { wardrobe = false; audio.ui(); return; }
     return;
   }

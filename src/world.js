@@ -833,24 +833,33 @@ function buildFieldMid(rng) {
 
 function buildFieldNear(rng) {
   var TW = 768, c = newCanvas(TW, H), g = ctxOf(c);
-  var i;
-  for (i = 0; i < 26; i++) {
-    var x = rng.int(0, TW), w = rng.int(30, 90);
-    g.fillStyle = rng.pick(['#5a7a48', '#4e6c40', '#66854e']);
-    for (var b = 0; b < 3; b++) g.fillRect(x, 190 + b * 8, w, 8);
+  var top = 140, i, r, x;
+  for (var y = top; y < H; y++) {
+    var t = (y - top) / (H - top - 1);
+    g.fillStyle = lerpColor('#c6a35a', '#51604a', t);
+    g.fillRect(0, y, TW, 1);
   }
-  for (i = 0; i < 90; i++) {
-    var gx = rng.int(0, TW), gy = rng.int(182, 214);
+  for (r = 0; r < 9; r++) {
+    var ry = top + 7 + r * 8;
+    g.globalAlpha = 0.24 + r * 0.05;
+    g.fillStyle = r % 2 ? '#8fae64' : '#a38b4e';
+    for (x = 0; x < TW; x += 12) {
+      g.fillRect(x, ry, 8, 2 + (r % 2) + (r >= 7 ? 2 : 0));
+    }
+    g.globalAlpha = 1;
+  }
+  for (i = 0; i < 80; i++) {
+    var gx = rng.int(0, TW), gy = rng.int(top + 8, 214);
     g.fillStyle = rng.pick(['#6f8f52', '#7fa05c', '#54704a']);
     g.fillRect(gx, gy, 2, 6);
     g.fillRect(gx + rng.int(-2, 2), gy + 2, 1, 4);
   }
   for (i = 0; i < 5; i++) {
-    var fx2 = rng.int(0, TW), fw2 = rng.int(40, 90);
+    var fx = rng.int(0, TW), fw = rng.int(40, 90);
     g.fillStyle = '#7a6a50';
-    g.fillRect(fx2, 186, fw2, 3);
-    g.fillRect(fx2 + 4, 189, 3, 12);
-    g.fillRect(fx2 + fw2 - 8, 189, 3, 12);
+    g.fillRect(fx, 180, fw, 3);
+    g.fillRect(fx + 4, 183, 3, 12);
+    g.fillRect(fx + fw - 8, 183, 3, 12);
   }
   return c;
 }
@@ -999,32 +1008,41 @@ function buildLakeMid(rng) {
 
 function buildLakeNear(rng) {
   var TW = 768, c = newCanvas(TW, H), g = ctxOf(c);
-  var i;
-  for (i = 0; i < 30; i++) {
-    var x = rng.int(0, TW), s = rng.int(14, 30);
+  var top = 136, i, x;
+  for (var y = top; y < H; y++) {
+    var t = (y - top) / (H - top - 1);
+    g.fillStyle = lerpColor('#2c4a5e', '#18293a', t);
+    g.fillRect(0, y, TW, 1);
+  }
+  for (i = 0; i < 46; i++) {
+    g.globalAlpha = 0.1 + rng.next() * 0.16;
+    g.fillStyle = '#cfe4ec';
+    g.fillRect(rng.int(0, TW), rng.int(top + 4, 214), rng.int(6, 30), 1);
+    g.globalAlpha = 1;
+  }
+  for (i = 0; i < 28; i++) {
+    x = rng.int(0, TW);
+    var s = rng.int(14, 30), ry2 = rng.int(186, 204);
     g.fillStyle = '#2c3e3a';
-    g.fillRect(x, 190, 2, 26);
+    g.fillRect(x, ry2, 2, 22);
     g.beginPath();
-    g.moveTo(x - s / 2, 192);
-    g.lineTo(x + 1, 192 - s);
-    g.lineTo(x + s / 2, 192);
+    g.moveTo(x - s / 2, ry2 + 2);
+    g.lineTo(x + 1, ry2 + 2 - s);
+    g.lineTo(x + s / 2, ry2 + 2);
     g.closePath(); g.fill();
     g.fillStyle = '#354c42';
     g.beginPath();
-    g.moveTo(x - s / 3, 196);
-    g.lineTo(x + 1, 196 - s * 0.8);
-    g.lineTo(x + s / 3, 196);
+    g.moveTo(x - s / 3, ry2 + 6);
+    g.lineTo(x + 1, ry2 + 6 - s * 0.8);
+    g.lineTo(x + s / 3, ry2 + 6);
     g.closePath(); g.fill();
   }
   for (i = 0; i < 50; i++) {
-    var gx = rng.int(0, TW), gy = rng.int(186, 214);
+    var gx = rng.int(0, TW), gy = rng.int(182, 214);
     g.fillStyle = rng.pick(['#3e5a48', '#31504a', '#4a6650']);
     g.fillRect(gx, gy, 1, rng.int(4, 10));
   }
-  for (i = 0; i < 6; i++) {
-    var bx = rng.int(0, TW), bw = rng.int(20, 46);
-    blob(g, bx, 208, bw, 14, '#3a4448');
-  }
+  for (i = 0; i < 8; i++) blob(g, rng.int(0, TW), 206, rng.int(20, 46), 12, '#3a4448');
   return c;
 }
 

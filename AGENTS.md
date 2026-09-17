@@ -68,7 +68,8 @@ Node DOM-stub harnesses (see `CODEBASE.md` → Verification).
   back, passenger arm, wall clutter — all outside the glass).
 - Character: lean noir rig, 8-frame composed run cycle, eased flip, 3-pose
   landing recovery, cane. No procedural coat tail (removed on purpose).
-- Three outfits (palette + hat swap on the same rig) bought with sparks.
+- Four outfits (detective, nightwatch, verdant, ninja; palette + hat swap on
+  the same rig) bought with sparks.
 - Three sceneries (ditch the city, farmland at golden hour, lake and
   mountains) selectable in the customise screen; the farmland is deliberately
   sparser (wider pole spacing).

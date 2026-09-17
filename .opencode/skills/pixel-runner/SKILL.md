@@ -180,7 +180,8 @@ level up.
   of `BODY_REST` uses palette key `A`, which is how a "scarf colour" changes.
   Sparks are earned in a run and banked at game over (`lj_sparks`), outfits
   and the equipped one persist as `lj_owned` / `lj_outfit`. The wardrobe is on
-  the title screen (C).
+  the title screen and the pause menu (C mid-run auto-pauses); digits map 1-4
+  to outfits and 5-7 to backgrounds.
 - **Sceneries** (`src/world.js`): add an entry to `THEMES` with sky/far/mid/
   near/ground builders (each returns a canvas, mid returns `{c, vents}`) plus
   `rain`, `mist`, `cars`, `poleGap`, `poleStyle` and a `wire` palette. The

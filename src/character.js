@@ -514,4 +514,5 @@ function runSheet() {
   for (i = 0; i < 2; i++) { s = art.fall[i]; blit(g, s, 92 + i * 22, ry - (s.h - 1), false); }
   drawText(g, 'FLIP 1X', 148, 163, '#ffe9a8', 1);
   for (i = 0; i < 6; i++) { s = art.tuck[i * 2]; blit(g, s, 148 + i * 20, ry - s.h + 8, false); }
+  compositeScene();
 }

@@ -5,8 +5,18 @@ description: Durable spec and rules for the LINE JUMPER game in D:\Fake desktop\
 
 # LINE JUMPER — project spec
 
-Persistent spec for this project. **Update this file whenever a design or
-physics decision is locked in.** It is the source of truth for future sessions.
+**Where the documentation lives (all inside this repository):**
+
+| file | purpose |
+| --- | --- |
+| `AGENTS.md` (project root) | the current spec: constraints, live constants, feature set, working rules |
+| `CODEBASE.md` (project root) | full codebase guide: modules, render pipeline, data structures, extension guides, verification |
+| this file | the auto-loaded skill: locked art/gameplay rules and gotchas |
+
+This skill lives in the project at `.opencode/skills/pixel-runner/SKILL.md`
+because that is the only path opencode auto-discovers; the durable documents
+are the two root `.md` files above, which anyone can find without knowing
+opencode. **Update all three whenever a decision is locked in.**
 
 ## Layout and build
 

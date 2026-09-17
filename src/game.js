@@ -1018,6 +1018,15 @@ function drawErrors() {
   for (var i = 0; i < Math.min(4, errs.length); i++) drawText(g, errs[i].slice(0, 60), 2, 10 + i * 8, '#ffb0b0', 1);
 }
 
+function compositeScene() {
+  g = sceneG;
+  sceneG.clearRect(0, 0, SW, SH);
+  sceneG.drawImage(cabinC, 0, 0);
+  sceneG.drawImage(viewC, VOX, VOY);
+  sceneG.drawImage(sashC, 0, 0);
+  g = viewG;
+}
+
 function render() {
   g.clearRect(0, 0, W, H);
   var tunA = tunnelAmt();
@@ -1060,12 +1069,7 @@ function render() {
   if (paused) drawPause();
   drawErrors();
   if (ZOOM > 1) g.drawImage(viewC, ZOX - W / (2 * ZOOM), ZOY - H / (2 * ZOOM), W / ZOOM, H / ZOOM, 0, 0, W, H);
-  g = sceneG;
-  sceneG.clearRect(0, 0, SW, SH);
-  sceneG.drawImage(cabinC, 0, 0);
-  sceneG.drawImage(viewC, VOX, VOY);
-  sceneG.drawImage(sashC, 0, 0);
-  g = viewG;
+  compositeScene();
 }
 
 function scriptedInput() {
@@ -1194,6 +1198,7 @@ function runSelfTest() {
     deaths: 'P1 ' + r1.dist + 'M  DROPS ' + attempted,
     upTry: upTry, upOK: upOK, errs: errs
   });
+  compositeScene();
   document.title = errs === 0 ? 'TEST PASS' : 'TEST ERRORS ' + errs;
 }
 
@@ -1273,6 +1278,7 @@ function runAudioCheck() {
     var l4 = 'stop ' + audio.bgmDebug();
     render();
     drawAudioReport([l0, l1, l2, l3, l4]);
+    compositeScene();
     document.title = 'AUDIO CHECK';
   }, 1800);
 }

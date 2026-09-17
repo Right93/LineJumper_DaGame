@@ -46,7 +46,9 @@ dist/index.html     built distributable (committed so the repo stays playable)
   CDN links, no npm dependencies. Everything else is drawn procedurally with
   Canvas 2D from string-array sprites and `fillRect`.
 - Internal resolution is 384×216, upscaled with `image-rendering: pixelated`
-  (integer CSS scale, max 7×).
+  (integer CSS scale, max 7×). The view is composited into a framed carriage
+  window at `VOX,VOY = 44,58`, scaled a uniform 1.125× to `VW×VH` = 432×243,
+  so the interior stays visible all around the glass.
 - Keep runtime errors at zero. The page captures `window.onerror` into
   `RUNTIME_ERRORS` and draws them on-canvas in red. Never ship with entries in
   `RUNTIME_ERRORS` or `ART_ERRORS`.

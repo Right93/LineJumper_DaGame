@@ -1022,7 +1022,7 @@ function compositeScene() {
   g = sceneG;
   sceneG.clearRect(0, 0, SW, SH);
   sceneG.drawImage(cabinC, 0, 0);
-  sceneG.drawImage(viewC, VOX, VOY);
+  sceneG.drawImage(viewC, VOX, VOY, VW, VH);
   sceneG.drawImage(sashC, 0, 0);
   g = viewG;
 }
@@ -1285,6 +1285,18 @@ function runAudioCheck() {
 
 function onKey(e, down) {
   var code = e.code;
+  /* wardrobe overlays the game: swallow everything while it's open */
+  if (wardrobe && (state === 'title' || paused)) {
+    if (!down) { input.jumpHeld = false; input.downHeld = false; return; }
+    if (code === 'Digit1') { equipOutfit(OUTFIT_IDS[0]); return; }
+    if (code === 'Digit2') { equipOutfit(OUTFIT_IDS[1]); return; }
+    if (code === 'Digit3') { equipOutfit(OUTFIT_IDS[2]); return; }
+    if (code === 'Digit4') { setScenery(THEME_IDS[0]); return; }
+    if (code === 'Digit5') { setScenery(THEME_IDS[1]); return; }
+    if (code === 'Digit6') { setScenery(THEME_IDS[2]); return; }
+    if (code === 'KeyC' || code === 'Escape') { wardrobe = false; audio.ui(); return; }
+    return;
+  }
   if (code === 'Space' || code === 'ArrowUp' || code === 'KeyW' || code === 'KeyZ') {
     e.preventDefault();
     if (down) {
@@ -1305,23 +1317,18 @@ function onKey(e, down) {
     return;
   }
   if (!down) return;
-  if (wardrobe && (state === 'title' || paused)) {
-    if (code === 'Digit1') { equipOutfit(OUTFIT_IDS[0]); return; }
-    if (code === 'Digit2') { equipOutfit(OUTFIT_IDS[1]); return; }
-    if (code === 'Digit3') { equipOutfit(OUTFIT_IDS[2]); return; }
-    if (code === 'Digit4') { setScenery(THEME_IDS[0]); return; }
-    if (code === 'Digit5') { setScenery(THEME_IDS[1]); return; }
-    if (code === 'Digit6') { setScenery(THEME_IDS[2]); return; }
-    if (code === 'KeyC' || code === 'Escape') { wardrobe = false; audio.ui(); return; }
-    return;
-  }
   if (code === 'KeyM') { audio.init(); audio.toggleMute(); }
   if (code === 'KeyV' && state === 'title') {
     var idx = THEME_IDS.indexOf(scenery);
     setScenery(THEME_IDS[(idx + 1) % THEME_IDS.length]);
     return;
   }
-  if (code === 'KeyC' && (state === 'title' || paused)) { wardrobe = !wardrobe; audio.ui(); return; }
+  if (code === 'KeyC' && state !== 'over') {
+    if (state === 'play') { paused = true; audio.musicPause(); }
+    wardrobe = true;
+    audio.ui();
+    return;
+  }
   if (code === 'KeyR') startGame();
   if (code === 'Escape' || code === 'KeyP') {
     if (state === 'play') {
@@ -1337,7 +1344,7 @@ cv.addEventListener('pointerdown', function (e) {
   audio.init(); audio.resume();
   if (state === 'title' || (state === 'over' && overT > 0.6)) { startGame(); return; }
   var r = cv.getBoundingClientRect();
-  var y = (((e.clientY - r.top) / r.height) * SH - VOY) / H;
+  var y = (((e.clientY - r.top) / r.height) * SH - VOY) * H / VH;
   if (y < 0.62) { input.jump = true; input.jumpHeld = true; if (state === 'play') player.jumpBuf = JBUF; }
   else { input.down = true; if (state === 'play' && (player.state === 'run' || player.state === 'land')) doDrop(); }
 });

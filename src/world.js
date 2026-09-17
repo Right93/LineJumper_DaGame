@@ -381,8 +381,9 @@ function buildTunnel(rng) {
 
 /* ====================== train car interior + window ======================
    The visible canvas is the inside of the carriage (SW x SH). The running
-   world is rendered into its own view canvas (W x H) and composited at
-   (VOX, VOY), sandwiched between two cabin layers:
+   world is rendered into its own view canvas (W x H) and composited into a
+   framed window at (VOX,VOY) upscaled to VW x VH (uniform 1.125x), so the
+   carriage interior stays visible all around the glass. Three stacked layers:
 
        cabinC   ceiling, luggage rack + bags, wall panelling, straps,
                 seat back, a passenger's arm, wall clutter
@@ -425,26 +426,14 @@ function buildCabin(rng) {
   g.fillStyle = '#ffeac4';
   g.fillRect(154, 7, 212, 2);
   softGlow(g, 260, 9, 30, '#ffe0b0', 0.22);
-  /* ---- luggage rack ---- */
-  rect(g, 0, 46, SW, 3, '#3a3346');
-  rect(g, 0, 46, SW, 1, '#5a5270');
-  g.globalAlpha = 0.5;
-  for (x = 0; x < SW; x += 7) rect(g, x, 49, 1, 30, '#2a2434');
-  g.globalAlpha = 1;
-  rect(g, 0, 78, SW, 2, '#2a2434');
-  /* bags on the rack */
-  g.fillStyle = '#2e2a3c';
-  blob(g, 108, 62, 62, 30, '#2e2a3c');
-  rect(g, 80, 62, 56, 16, '#262234');
-  rect(g, 80, 74, 56, 4, '#1a1726');
-  g.fillStyle = '#4a4260';
-  rect(g, 84, 58, 10, 6, '#4a4260');
-  rect(g, 132, 58, 8, 6, '#4a4260');
-  g.fillStyle = '#1a1626';
-  rect(g, 352, 44, 74, 34, '#1a1626');
-  rect(g, 352, 44, 74, 6, '#2e2840');
-  rect(g, 384, 50, 10, 22, '#2e2840');
-  rect(g, 360, 78, 58, 3, '#100d1c');
+  /* slim rack strip above the glass */
+  rect(g, 0, VOY - 2, SW, 2, '#3a3346');
+  rect(g, 0, VOY - 3, SW, 1, '#5a5270');
+  rect(g, 56, VOY - 16, 54, 14, '#262234');
+  rect(g, 164, VOY - 18, 62, 16, '#1c1726');
+  rect(g, 302, VOY - 14, 46, 12, '#2e2840');
+  rect(g, 58, VOY - 16, 10, 4, '#4a4260');
+  rect(g, 206, VOY - 18, 9, 4, '#4a4260');
   /* ---- wall panelling ---- */
   gradRows(g, 48, SH, SW, [[0, '#4c3a30'], [0.35, '#5c483a'], [0.72, '#40302a'], [1, '#241b1c']]);
   g.globalAlpha = 0.16;
@@ -456,8 +445,6 @@ function buildCabin(rng) {
     g.fillRect(rng.int(0, SW), rng.int(48, SH), rng.int(2, 14), 1);
     g.globalAlpha = 1;
   }
-  rect(g, 50, 48, 2, SH - 48, '#2a1e1c');
-  rect(g, SW - 52, 48, 2, SH - 48, '#2a1e1c');
   /* warm pools of light from the ceiling */
   for (y = 48; y < SH - 30; y += 2) {
     g.globalAlpha = 0.09 * (1 - (y - 48) / (SH - 78));
@@ -504,8 +491,8 @@ function buildCabin(rng) {
   rect(g, 66, SH - 36, 12, 16, '#4a6a7a');
   rect(g, 68, SH - 34, 8, 12, '#5f8595');
   /* ---- wall clutter, on the panelling either side of the window ---- */
-  drawPoster(g, 8, 104, 38, 78, '#3a2830', '#191218', '#9a7a70', rng, true);
-  drawPoster(g, SW - 46, 116, 38, 68, '#242c3c', '#12161f', '#8b9cb2', rng, false);
+  drawPoster(g, 6, 104, 38, 78, '#3a2830', '#191218', '#9a7a70', rng, true);
+  drawPoster(g, 476, 116, 38, 68, '#242c3c', '#12161f', '#8b9cb2', rng, false);
   g.globalAlpha = 0.6;
   drawText(g, 'HOSHI', SW - 41, 122, '#cdd8e6', 1);
   drawText(g, 'COLA', SW - 40, 130, '#cdd8e6', 1);
@@ -537,60 +524,54 @@ function buildCabin(rng) {
 
 function buildSash(rng) {
   var c = newCanvas(SW, SH), g = ctxOf(c);
-  var L = VOX - 22, T = VOY - 22, RR = VOX + W + 22, BB = VOY + H + 26;
-  g.fillStyle = '#171320';
-  roundRectPath(g, L - 12, T - 12, (RR - L) + 24, (BB - T) + 24, 18);
+  var sillY = VOY + VH, i;
+  /* window frame ring around the glass */
+  g.fillStyle = '#191321';
+  roundRectPath(g, VOX - 16, VOY - 16, VW + 32, VH + 32, 6);
   g.fill();
-  g.fillStyle = '#241d2c';
-  g.fillRect(L - 12, T - 12, (RR - L) + 24, 4);
-  g.fillRect(L - 12, T - 12, 4, (BB - T) + 24);
+  g.fillStyle = '#241d2e';
+  roundRectPath(g, VOX - 16, VOY - 16, VW + 32, 6, 6);
+  g.fill();
+  g.fillStyle = '#100c18';
+  roundRectPath(g, VOX - 16, VOY + VH + 10, VW + 32, 6, 6);
+  g.fill();
   g.globalCompositeOperation = 'destination-out';
-  roundRectPath(g, VOX - 2, VOY - 2, W + 4, H + 4, 10);
+  roundRectPath(g, VOX, VOY, VW, VH, 6);
   g.fill();
   g.globalCompositeOperation = 'source-over';
+  /* bevel lines hugging the glass */
   g.strokeStyle = '#0a0810';
-  g.lineWidth = 3;
-  roundRectPath(g, VOX - 3, VOY - 3, W + 6, H + 6, 11);
+  g.lineWidth = 2;
+  roundRectPath(g, VOX - 2, VOY - 2, VW + 4, VH + 4, 8);
   g.stroke();
-  g.strokeStyle = '#3a3346';
+  g.strokeStyle = '#3a3348';
   g.lineWidth = 1;
-  roundRectPath(g, L + 2, T + 2, (RR - L) - 4, (BB - T) - 4, 12);
+  roundRectPath(g, VOX + 1, VOY + 1, VW - 2, VH - 2, 5);
   g.stroke();
-  var i, rx, ry;
-  for (rx = L + 10; rx < RR - 6; rx += 52) {
-    for (ry = T + 10; ry < BB - 6; ry += 64) {
-      g.fillStyle = '#0a0710';
-      g.fillRect(rx, ry, 3, 3);
-      g.fillStyle = '#4a4058';
-      g.fillRect(rx, ry, 2, 1);
-    }
+  /* soft shadow just inside the top of the glass */
+  g.globalAlpha = 0.3;
+  g.fillStyle = '#000000';
+  g.fillRect(VOX, VOY + 2, VW, 4);
+  g.globalAlpha = 1;
+  /* sill ledge under the glass */
+  rect(g, VOX - 20, sillY, VW + 40, 24, '#2a2231');
+  rect(g, VOX - 20, sillY, VW + 40, 3, '#3e3448');
+  rect(g, VOX - 20, sillY + 3, VW + 40, 1, '#17111f');
+  rect(g, VOX - 20, sillY + 22, VW + 40, 2, '#120e18');
+  g.globalAlpha = 0.5;
+  for (i = 0; i < 30; i++) {
+    g.fillStyle = rng.chance(0.5) ? '#000000' : '#4a4058';
+    g.fillRect(rng.int(VOX - 16, VOX + VW + 16), rng.int(sillY + 5, sillY + 20), rng.int(2, 9), 1);
   }
-  for (i = 0; i < 90; i++) {
-    g.globalAlpha = 0.05 + rng.next() * 0.06;
-    g.fillStyle = rng.chance(0.5) ? '#000000' : '#5a4a58';
-    var side = rng.int(0, 3);
-    if (side === 0) g.fillRect(rng.int(L - 10, VOX), rng.int(T - 10, BB + 10), rng.int(2, 10), rng.int(1, 4));
-    else if (side === 1) g.fillRect(rng.int(VOX + W, RR + 10), rng.int(T - 10, BB + 10), rng.int(2, 10), rng.int(1, 4));
-    else g.fillRect(rng.int(L - 10, RR + 10), rng.int(T - 10, VOY), rng.int(2, 10), rng.int(1, 4));
-    g.globalAlpha = 1;
-  }
-  rect(g, L - 16, BB, (RR - L) + 32, 12, '#2a2231');
-  rect(g, L - 16, BB, (RR - L) + 32, 3, '#3e3448');
-  rect(g, L - 16, BB + 12, (RR - L) + 32, 2, '#120e18');
-  /* ticket stub tucked into the seal */
-  g.fillStyle = '#1a1520';
-  g.fillRect(92, BB - 9, 30, 13);
-  g.fillStyle = '#e8dcc4';
-  g.fillRect(93, BB - 8, 28, 11);
-  g.fillStyle = '#b8484a';
-  g.fillRect(93, BB - 8, 28, 2);
-  g.fillStyle = '#c9bda4';
-  g.fillRect(96, BB - 5, 20, 1);
-  g.fillRect(96, BB - 2, 13, 1);
-  g.fillStyle = '#1a1520';
-  g.fillRect(118, BB - 5, 2, 2);
-  /* paper cup on the sill */
-  var cx2 = L + 6, cy2 = BB - 1;
+  g.globalAlpha = 1;
+  /* ticket stub and paper cup on the ledge */
+  var tx = VOX + VW - 108, cx2 = VOX + 56, cy2 = sillY + 15;
+  g.fillStyle = '#1a1520'; g.fillRect(tx, sillY, 30, 13);
+  g.fillStyle = '#e8dcc4'; g.fillRect(tx + 1, sillY + 1, 28, 11);
+  g.fillStyle = '#b8484a'; g.fillRect(tx + 1, sillY + 1, 28, 2);
+  g.fillStyle = '#c9bda4'; g.fillRect(tx + 4, sillY + 4, 20, 1);
+  g.fillRect(tx + 4, sillY + 7, 13, 1);
+  g.fillStyle = '#1a1520'; g.fillRect(tx + 26, sillY + 4, 2, 2);
   g.fillStyle = '#2a2028'; g.fillRect(cx2, cy2 - 11, 11, 11);
   g.fillStyle = '#e6dcc8'; g.fillRect(cx2 + 1, cy2 - 10, 9, 10);
   g.fillStyle = '#c9bda4'; g.fillRect(cx2 + 1, cy2 - 10, 2, 10);
@@ -601,17 +582,18 @@ function buildSash(rng) {
   g.fillRect(cx2 + 3, cy2 - 15, 1, 2);
   g.fillRect(cx2 + 6, cy2 - 17, 1, 2);
   g.globalAlpha = 1;
+  /* scuff smudges on the wall beyond the frame */
   g.globalAlpha = 0.12;
-  for (i = 0; i < 30; i++) {
+  for (i = 0; i < 24; i++) {
     g.fillStyle = rng.chance(0.5) ? '#000000' : '#6a6070';
-    var sx = rng.chance(0.5) ? rng.int(L - 10, VOX - 2) : rng.int(VOX + W + 2, RR + 10);
-    g.fillRect(sx, rng.int(T, BB), rng.int(3, 10), 1);
+    var sx = rng.chance(0.5) ? rng.int(2, VOX - 18) : rng.int(VOX + VW + 18, SW - 2);
+    g.fillRect(sx, rng.int(VOY, VOY + VH), rng.int(3, 10), 1);
   }
   g.globalAlpha = 1;
-  /* straps hang between the seat and the glass, in front of the frame */
-  strapHanger(g, 214, 44, 30, -0.05);
-  strapHanger(g, 286, 44, 26, 0.05);
-  strapHanger(g, 358, 44, 32, -0.03);
+  /* straps hang inside the top of the glass */
+  strapHanger(g, VOX + 96, VOY + 6, 30, -0.05);
+  strapHanger(g, VOX + VW / 2, VOY + 6, 24, 0.05);
+  strapHanger(g, VOX + VW - 96, VOY + 6, 30, -0.03);
   return c;
 }
 

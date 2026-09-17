@@ -34,7 +34,9 @@ Node DOM-stub harnesses (see `CODEBASE.md` → Verification).
 - Sources live in `src/` and share one global scope; load order is
   core → character → world → audio → game.
 - Internal resolution: the game view is **384×216**; the visible canvas is the
-  carriage at **520×360** with the view composited at **(68, 96)**.
+  carriage at **520×360** with the view composited into a framed window at
+  **(44, 58)** scaled **1.125×** to **432×243**, so the detailed interior
+  stays visible all around the glass.
 - Runtime errors must stay at zero: `window.onerror` collects into
   `RUNTIME_ERRORS`, which is drawn on-canvas. A build with entries there is
   broken.

@@ -32,10 +32,14 @@ code, which all lives in `game.js` (last).
 | --- | --- |
 | `W,H = 384,216` | the game view (the glass) |
 | `SW,SH = 520,360` | the visible canvas: the whole carriage |
-| `VOX,VOY = 68,96` | where the view is composited into the carriage |
+| `VW,VH = 432,243` | the glass: view composited at (VOX,VOY), scaled 1.125× |
+| `VOX,VOY = 44,58` | top-left of the framed window in the carriage |
 
 The canvas is upscaled with `image-rendering: pixelated` at an integer scale
-(max 6×), recomputed on resize.
+(max 6×), recomputed on resize. The glass upscales the view by a uniform
+1.125× into a framed window at (44,58)-(476,301), leaving the carriage
+interior visible in the side columns and in the ceiling/rack band on top and
+seat/sill band at the bottom.
 
 ---
 
@@ -52,7 +56,7 @@ viewG.clear
   HUD / title / game-over / pause / errors
 composite on sceneG:
   cabinC   carriage interior, luggage, clutter      (behind the glass)
-  viewC    the frame we just drew                   (at VOX,VOY)
+  viewC    the frame we just drew                   (at VOX,VOY, scaled VW×VH)
   sashC    window frame, seal, sill, straps         (in front of the glass)
 ```
 

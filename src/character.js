@@ -5,7 +5,7 @@
 var LAND_T = 0.3, FLIP_T = 0.66, TAIL_SEG = 2.6;
 
 var PP = {
-  'K': '#15101c', 'H': '#2a2433', 'h': '#3f3849',
+  'A': '#15101c', 'K': '#15101c', 'H': '#2a2433', 'h': '#3f3849',
   'R': '#a83e4f', 'r': '#7d2c3a',
   'C': '#f0e0bd', 'c': '#d8c296', 'd': '#b0976c',
   'S': '#e8b48c', 's': '#c68f66', 'E': '#221a28',
@@ -13,29 +13,71 @@ var PP = {
   'W': '#6f4a2c', 'Q': '#a87c46', 'T': '#e6dcc8'
 };
 
-var BODY = [
-'....KKKK......',
-'....KHHK......',
-'....KHHK......',
-'..KKKKKKKK....',
-'....KSsSK.....',
-'....KSsEK.....',
-'.....KSK......',
-'....KKKK......',
-'...KcCdCK.....',
-'...KcCdCK.....',
-'...KcCdCKK....',
-'...KcCdCKcK...',
-'...KcCdCKcK...',
-'..cKcCdCKcK...',
-'..cKcCdCKcK...',
-'.ccKcCdCKSK...',
-'.ccKcCdCK.....',
-'..cKcCdCK.....',
-'...KcCdCK.....',
-'...KdcdcK.....',
-'...KPPPPK.....',
-'....KPPPK.....'
+var HATS = {
+  bowler: [
+    '....KKKK......',
+    '....KHHK......',
+    '....KHHK......',
+    '..KKKKKKKK....'
+  ],
+  trilby: [
+    '....KHHK......',
+    '....KHHK......',
+    '..KKKKKKKKKK..'
+  ],
+  flatcap: [
+    '...KHHHK......',
+    '..KHHHHHK.....',
+    '..KKKKKKK.....'
+  ]
+};
+
+/* Outfits are palette swaps plus a hat accessory on the same rig. No outfit
+   gets its own animation frames: the legs, tuck, recovery and fall poses are
+   shared and only HATS + the palette change. */
+var OUTFITS = {
+  detective: {
+    name: 'DETECTIVE', price: 0, hat: 'bowler',
+    pal: { 'A': '#15101c' }
+  },
+  nightwatch: {
+    name: 'NIGHTWATCH', price: 300, hat: 'trilby',
+    pal: {
+      'A': '#7fd4d8', 'H': '#4a2230', 'h': '#6b3242',
+      'C': '#cdd6e4', 'c': '#a9b4c6', 'd': '#828da2',
+      'P': '#2a2c3a', 'p': '#1d1f28', 'W': '#33333d', 'Q': '#5f5f70'
+    }
+  },
+  verdant: {
+    name: 'VERDANT', price: 750, hat: 'flatcap',
+    pal: {
+      'A': '#d8a03c', 'H': '#4a3524', 'h': '#6b503a',
+      'C': '#8d9a62', 'c': '#717d50', 'd': '#58623d',
+      'P': '#3a3a2c', 'p': '#28281e', 'W': '#5a4030', 'Q': '#8a6a44'
+    }
+  }
+};
+var OUTFIT_IDS = ['detective', 'nightwatch', 'verdant'];
+
+var BODY_REST = [
+  '....KSsSK.....',
+  '....KSsEK.....',
+  '.....KSK......',
+  '....AAAA......',
+  '...KcCdCK.....',
+  '...KcCdCK.....',
+  '...KcCdCKK....',
+  '...KcCdCKcK...',
+  '...KcCdCKcK...',
+  '..cKcCdCKcK...',
+  '..cKcCdCKcK...',
+  '.ccKcCdCKSK...',
+  '.ccKcCdCK.....',
+  '..cKcCdCK.....',
+  '...KcCdCK.....',
+  '...KdcdcK.....',
+  '...KPPPPK.....',
+  '....KPPPK.....'
 ];
 
 var LEG_SHAPES = {
@@ -320,24 +362,38 @@ function mergeRows(a, b) {
   return out;
 }
 
-function composeRun() {
+function composeRun(body) {
   var out = [];
   for (var i = 0; i < RUN_LEGS.length; i++) {
-    out.push(BODY.concat(mergeRows(LEG_SHAPES[RUN_LEGS[i][0]], LEG_SHAPES[RUN_LEGS[i][1]])));
+    out.push(body.concat(mergeRows(LEG_SHAPES[RUN_LEGS[i][0]], LEG_SHAPES[RUN_LEGS[i][1]])));
   }
   return out;
 }
 
-function buildArt() {
+function outfitPalette(id) {
+  var of = OUTFITS[id] || OUTFITS.detective;
+  var pal = {};
+  for (var k in PP) pal[k] = PP[k];
+  if (of.pal) for (var k2 in of.pal) pal[k2] = of.pal[k2];
+  return pal;
+}
+
+var artCache = {};
+
+function buildArt(outfitId) {
+  if (!OUTFITS[outfitId]) outfitId = 'detective';
+  if (artCache[outfitId]) return artCache[outfitId];
+  var pal = outfitPalette(outfitId);
+  var BODY = HATS[OUTFITS[outfitId].hat].concat(BODY_REST);
   var art = {};
-  var frames = composeRun();
+  var frames = composeRun(BODY);
   art.run = [];
-  for (var f = 0; f < frames.length; f++) art.run.push(compile(frames[f], PP));
-  art.idle = compile(BODY.concat(mergeRows(LEG_SHAPES.plant, LEG_SHAPES.plant)), PP);
-  art.recover = [compile(RECOVER0, PP), compile(RECOVER1, PP), compile(RECOVER2, PP)];
+  for (var f = 0; f < frames.length; f++) art.run.push(compile(frames[f], pal));
+  art.idle = compile(BODY.concat(mergeRows(LEG_SHAPES.plant, LEG_SHAPES.plant)), pal);
+  art.recover = [compile(RECOVER0, pal), compile(RECOVER1, pal), compile(RECOVER2, pal)];
   art.tuck = [];
-  for (var i = 0; i < 12; i++) art.tuck.push(rotateSprite(compile(TUCK, PP), i * 30));
-  art.fall = [compile(FALL0, PP), compile(FALL1, PP)];
+  for (var i = 0; i < 12; i++) art.tuck.push(rotateSprite(compile(TUCK, pal), i * 30));
+  art.fall = [compile(FALL0, pal), compile(FALL1, pal)];
   art.branch = compile([
     '..K....KK.',
     '.KbK..KbK.',
@@ -362,6 +418,7 @@ function buildArt() {
   art.crowFly0 = compile(['K...K', 'KK.KK', '.KKK.', '.KeK.'], { 'K': '#191420', 'e': '#ff6a4a' });
   art.crowFly1 = compile(['.KKK.', 'KKKKK', '.KeK.', '.....'], { 'K': '#191420', 'e': '#ff6a4a' });
   art.shoes = compile(['..K..', '..K..', '..K..', '.K.K.', '.KKK.', '.K.K.'], { 'K': '#221a26' });
+  artCache[outfitId] = art;
   return art;
 }
 

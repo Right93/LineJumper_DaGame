@@ -44,7 +44,7 @@ var P = {
     { id: 'land', label: 'LAND / RECOVER', frames: 3 },
     { id: 'death', label: 'DEATH', frames: 12 }
   ],
-  si: 1, frame: 0, playing: true, speed: 1, acc: 0, showTail: false
+  si: 1, frame: 0, playing: true, speed: 1, acc: 0, showTail: false, outfit: 0
 };
 
 function applyFrame() {
@@ -168,6 +168,10 @@ function onKey(e) {
   else if (code === 'BracketLeft') P.speed = Math.max(20, P.speed - 20);
   else if (code === 'BracketRight') P.speed = Math.min(300, P.speed + 20);
   else if (code === 'KeyT') P.showTail = !P.showTail;
+  else if (code === 'KeyO') {
+    P.outfit = (P.outfit + 1) % OUTFIT_IDS.length;
+    art = buildArt(OUTFIT_IDS[P.outfit]);
+  }
   else if (code === 'Digit1') setState(0);
   else if (code === 'Digit2') setState(1);
   else if (code === 'Digit3') setState(2);
@@ -202,6 +206,10 @@ function frame(ts) {
   requestAnimationFrame(frame);
 }
 
+if (location.search.indexOf('outfit=') >= 0) {
+  P.outfit = Math.min(OUTFIT_IDS.length - 1, parseInt(location.search.split('outfit=')[1], 10) || 0);
+  art = buildArt(OUTFIT_IDS[P.outfit]);
+}
 applyFrame();
 document.title = 'CHARACTER PREVIEW';
 requestAnimationFrame(frame);

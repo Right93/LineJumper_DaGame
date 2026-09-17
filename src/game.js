@@ -23,7 +23,12 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-var art = buildArt();
+var sparkBank = 0, ownedOutfits = ['detective'], equippedOutfit = 'detective', wardrobe = false, wardrobeMsg = '', wardrobeMsgT = 0;
+
+loadWardrobe();
+if (qs.get('outfit')) equippedOutfit = OUTFITS[qs.get('outfit')] ? qs.get('outfit') : equippedOutfit;
+if (qs.get('wardrobe')) wardrobe = true;
+var art = buildArt(equippedOutfit);
 var city = buildCity(20240);
 var frameC = buildFrame(makeRng(9));
 var glassC = buildGlass(makeRng(5));
@@ -48,6 +53,41 @@ var ai = { jumps: 0, drops: 0 };
 
 function loadBest() { try { return parseInt(localStorage.getItem('lj_best') || '0', 10) || 0; } catch (e) { return 0; } }
 function saveBest(v) { try { localStorage.setItem('lj_best', String(v)); } catch (e) { } }
+function lsGet(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) { } }
+
+
+function loadWardrobe() {
+  sparkBank = parseInt(lsGet('lj_sparks', '0'), 10) || 0;
+  ownedOutfits = String(lsGet('lj_owned', 'detective')).split(',');
+  ownedOutfits = ownedOutfits.filter(function (s) { return !!OUTFITS[s]; });
+  if (ownedOutfits.indexOf('detective') < 0) ownedOutfits.unshift('detective');
+  var eq = lsGet('lj_outfit', 'detective');
+  equippedOutfit = OUTFITS[eq] ? eq : 'detective';
+}
+function saveWardrobe() {
+  lsSet('lj_sparks', sparkBank);
+  lsSet('lj_owned', ownedOutfits.join(','));
+  lsSet('lj_outfit', equippedOutfit);
+}
+function equipOutfit(id) {
+  var of = OUTFITS[id];
+  if (!of) return;
+  if (ownedOutfits.indexOf(id) < 0) {
+    if (sparkBank < of.price) {
+      wardrobeMsg = 'NEED ' + (of.price - sparkBank) + ' MORE SPARKS';
+      wardrobeMsgT = 1.8;
+      audio.ui();
+      return;
+    }
+    sparkBank -= of.price;
+    ownedOutfits.push(id);
+    audio.stunt();
+  } else audio.ui();
+  equippedOutfit = id;
+  art = buildArt(id);
+  saveWardrobe();
+}
 
 function decoY(lvl, x) {
   var period = 118 + lvl * 21;
@@ -217,6 +257,8 @@ function gameOver(kind) {
   audio.crash();
   shakeT = 0.5; shakeA = 3.5; flashT = 0.22;
   burst(player.x, player.y - 10, kind === 'hit' ? '#ffd27a' : '#ff7a5a', 16, 90);
+  sparkBank += sparks;
+  saveWardrobe();
   finalScore = { dist: distM(), sparks: sparks, stunts: stunts, ups: ups, total: totalScore() };
   var b = loadBest();
   if (finalScore.total > b) { saveBest(finalScore.total); best = finalScore.total; newBest = true; }
@@ -470,6 +512,7 @@ function stepSim(dt) {
     overT += dt;
     updatePlayer(dt); updateEntities(dt);
   }
+  if (wardrobeMsgT > 0) wardrobeMsgT -= dt;
   updateTail(dt);
   updateCamera(dt);
   input.jump = false; input.down = false;
@@ -804,6 +847,52 @@ function drawTitle() {
   drawTextCenter(g, 'SPACE JUMP   DOWN DROP   M MUTE   R RESTART', W / 2, cy + 68, '#7f7098', 1);
   drawTextCenter(g, 'HOLD JUMP TO REACH THE LINE ABOVE', W / 2, cy + 79, '#9fb6d8', 1);
   if (Math.floor(T * 2) % 2) drawTextCenter(g, 'PRESS SPACE OR TAP TO RIDE', W / 2, cy + 92, '#ffe9a8', 1);
+  var ow = OUTFITS[equippedOutfit];
+  drawSparkIcon(g, 30, 34);
+  drawText(g, '' + sparkBank, 41, 34, '#8ff0ff', 1);
+  drawText(g, 'OUTFIT ' + (ow ? ow.name : '?'), 30, 46, '#8f86a8', 1);
+  drawText(g, '[C] WARDROBE', 30, 56, '#6f6480', 1);
+  if (wardrobe) drawWardrobe();
+  if (wardrobeMsgT > 0) drawTextCenter(g, wardrobeMsg, W / 2, 154, '#ffb0b0', 1);
+}
+
+function drawWardrobe() {
+  g.globalAlpha = 0.97;
+  g.fillStyle = '#0b0816';
+  g.fillRect(36, 44, W - 72, 104);
+  g.globalAlpha = 1;
+  rect(g, 36, 44, W - 72, 1, '#4a3f5e');
+  rect(g, 36, 147, W - 72, 1, '#4a3f5e');
+  drawTextCenter(g, 'WARDROBE', W / 2, 50, '#ffe9a8', 1);
+  drawSparkIcon(g, 150, 50);
+  drawText(g, '' + sparkBank, 161, 50, '#8ff0ff', 1);
+  for (var i = 0; i < OUTFIT_IDS.length; i++) {
+    var id = OUTFIT_IDS[i], of = OUTFITS[id];
+    var y = 64 + i * 22;
+    var owned = ownedOutfits.indexOf(id) >= 0;
+    var eq = equippedOutfit === id;
+    g.globalAlpha = eq ? 0.22 : 0.12;
+    g.fillStyle = eq ? '#8ff0ff' : '#4a4060';
+    g.fillRect(42, y - 2, W - 84, 20);
+    g.globalAlpha = 1;
+    drawText(g, (i + 1) + '  ' + of.name, 48, y + 2, eq ? '#ffffff' : '#cfe0f0', 1);
+    var sw = of.pal && of.pal.C ? of.pal.C : '#f0e0bd';
+    rect(g, 168, y, 14, 14, sw);
+    rect(g, 168, y, 14, 1, '#0b0816');
+    rect(g, 182, y, 1, 14, '#0b0816');
+    var state = eq ? 'EQUIPPED' : (owned ? 'OWNED - PRESS ' + (i + 1) : of.price + ' SPARKS');
+    drawText(g, state, 190, y + 4, eq ? '#9fffa8' : (owned ? '#cfe0f0' : '#ffd27a'), 1);
+    var hat = HATS[of.hat], hpal = outfitPalette(id);
+    for (var r = 0; r < hat.length; r++) {
+      for (var c = 0; c < hat[r].length; c++) {
+        var ch = hat[r][c];
+        if (ch === '.') continue;
+        var col = hpal[ch];
+        if (col) { g.fillStyle = col; g.fillRect(228 + c * 4, y + r * 5, 4, 5); }
+      }
+    }
+  }
+  drawTextCenter(g, '1-3 BUY / EQUIP      C  CLOSE', W / 2, 138, '#8f86a8', 1);
 }
 
 function drawOver() {
@@ -1119,7 +1208,15 @@ function onKey(e, down) {
     return;
   }
   if (!down) return;
+  if (wardrobe && state === 'title') {
+    if (code === 'Digit1') { equipOutfit(OUTFIT_IDS[0]); return; }
+    if (code === 'Digit2') { equipOutfit(OUTFIT_IDS[1]); return; }
+    if (code === 'Digit3') { equipOutfit(OUTFIT_IDS[2]); return; }
+    if (code === 'KeyC' || code === 'Escape') { wardrobe = false; audio.ui(); return; }
+    return;
+  }
   if (code === 'KeyM') { audio.init(); audio.toggleMute(); }
+  if (code === 'KeyC' && state === 'title') { wardrobe = !wardrobe; audio.ui(); return; }
   if (code === 'KeyR') startGame();
   if (code === 'Escape' || code === 'KeyP') {
     if (state === 'play') {

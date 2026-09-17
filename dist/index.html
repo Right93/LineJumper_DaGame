@@ -190,7 +190,7 @@ function drawTextCenterOutline(g, str, cx, y, col, outline, scale, spacing) {
 var LAND_T = 0.3, FLIP_T = 0.66, TAIL_SEG = 2.6;
 
 var PP = {
-  'K': '#15101c', 'H': '#2a2433', 'h': '#3f3849',
+  'A': '#15101c', 'K': '#15101c', 'H': '#2a2433', 'h': '#3f3849',
   'R': '#a83e4f', 'r': '#7d2c3a',
   'C': '#f0e0bd', 'c': '#d8c296', 'd': '#b0976c',
   'S': '#e8b48c', 's': '#c68f66', 'E': '#221a28',
@@ -198,29 +198,71 @@ var PP = {
   'W': '#6f4a2c', 'Q': '#a87c46', 'T': '#e6dcc8'
 };
 
-var BODY = [
-'....KKKK......',
-'....KHHK......',
-'....KHHK......',
-'..KKKKKKKK....',
-'....KSsSK.....',
-'....KSsEK.....',
-'.....KSK......',
-'....KKKK......',
-'...KcCdCK.....',
-'...KcCdCK.....',
-'...KcCdCKK....',
-'...KcCdCKcK...',
-'...KcCdCKcK...',
-'..cKcCdCKcK...',
-'..cKcCdCKcK...',
-'.ccKcCdCKSK...',
-'.ccKcCdCK.....',
-'..cKcCdCK.....',
-'...KcCdCK.....',
-'...KdcdcK.....',
-'...KPPPPK.....',
-'....KPPPK.....'
+var HATS = {
+  bowler: [
+    '....KKKK......',
+    '....KHHK......',
+    '....KHHK......',
+    '..KKKKKKKK....'
+  ],
+  trilby: [
+    '....KHHK......',
+    '....KHHK......',
+    '..KKKKKKKKKK..'
+  ],
+  flatcap: [
+    '...KHHHK......',
+    '..KHHHHHK.....',
+    '..KKKKKKK.....'
+  ]
+};
+
+/* Outfits are palette swaps plus a hat accessory on the same rig. No outfit
+   gets its own animation frames: the legs, tuck, recovery and fall poses are
+   shared and only HATS + the palette change. */
+var OUTFITS = {
+  detective: {
+    name: 'DETECTIVE', price: 0, hat: 'bowler',
+    pal: { 'A': '#15101c' }
+  },
+  nightwatch: {
+    name: 'NIGHTWATCH', price: 300, hat: 'trilby',
+    pal: {
+      'A': '#7fd4d8', 'H': '#4a2230', 'h': '#6b3242',
+      'C': '#cdd6e4', 'c': '#a9b4c6', 'd': '#828da2',
+      'P': '#2a2c3a', 'p': '#1d1f28', 'W': '#33333d', 'Q': '#5f5f70'
+    }
+  },
+  verdant: {
+    name: 'VERDANT', price: 750, hat: 'flatcap',
+    pal: {
+      'A': '#d8a03c', 'H': '#4a3524', 'h': '#6b503a',
+      'C': '#8d9a62', 'c': '#717d50', 'd': '#58623d',
+      'P': '#3a3a2c', 'p': '#28281e', 'W': '#5a4030', 'Q': '#8a6a44'
+    }
+  }
+};
+var OUTFIT_IDS = ['detective', 'nightwatch', 'verdant'];
+
+var BODY_REST = [
+  '....KSsSK.....',
+  '....KSsEK.....',
+  '.....KSK......',
+  '....AAAA......',
+  '...KcCdCK.....',
+  '...KcCdCK.....',
+  '...KcCdCKK....',
+  '...KcCdCKcK...',
+  '...KcCdCKcK...',
+  '..cKcCdCKcK...',
+  '..cKcCdCKcK...',
+  '.ccKcCdCKSK...',
+  '.ccKcCdCK.....',
+  '..cKcCdCK.....',
+  '...KcCdCK.....',
+  '...KdcdcK.....',
+  '...KPPPPK.....',
+  '....KPPPK.....'
 ];
 
 var LEG_SHAPES = {
@@ -505,24 +547,38 @@ function mergeRows(a, b) {
   return out;
 }
 
-function composeRun() {
+function composeRun(body) {
   var out = [];
   for (var i = 0; i < RUN_LEGS.length; i++) {
-    out.push(BODY.concat(mergeRows(LEG_SHAPES[RUN_LEGS[i][0]], LEG_SHAPES[RUN_LEGS[i][1]])));
+    out.push(body.concat(mergeRows(LEG_SHAPES[RUN_LEGS[i][0]], LEG_SHAPES[RUN_LEGS[i][1]])));
   }
   return out;
 }
 
-function buildArt() {
+function outfitPalette(id) {
+  var of = OUTFITS[id] || OUTFITS.detective;
+  var pal = {};
+  for (var k in PP) pal[k] = PP[k];
+  if (of.pal) for (var k2 in of.pal) pal[k2] = of.pal[k2];
+  return pal;
+}
+
+var artCache = {};
+
+function buildArt(outfitId) {
+  if (!OUTFITS[outfitId]) outfitId = 'detective';
+  if (artCache[outfitId]) return artCache[outfitId];
+  var pal = outfitPalette(outfitId);
+  var BODY = HATS[OUTFITS[outfitId].hat].concat(BODY_REST);
   var art = {};
-  var frames = composeRun();
+  var frames = composeRun(BODY);
   art.run = [];
-  for (var f = 0; f < frames.length; f++) art.run.push(compile(frames[f], PP));
-  art.idle = compile(BODY.concat(mergeRows(LEG_SHAPES.plant, LEG_SHAPES.plant)), PP);
-  art.recover = [compile(RECOVER0, PP), compile(RECOVER1, PP), compile(RECOVER2, PP)];
+  for (var f = 0; f < frames.length; f++) art.run.push(compile(frames[f], pal));
+  art.idle = compile(BODY.concat(mergeRows(LEG_SHAPES.plant, LEG_SHAPES.plant)), pal);
+  art.recover = [compile(RECOVER0, pal), compile(RECOVER1, pal), compile(RECOVER2, pal)];
   art.tuck = [];
-  for (var i = 0; i < 12; i++) art.tuck.push(rotateSprite(compile(TUCK, PP), i * 30));
-  art.fall = [compile(FALL0, PP), compile(FALL1, PP)];
+  for (var i = 0; i < 12; i++) art.tuck.push(rotateSprite(compile(TUCK, pal), i * 30));
+  art.fall = [compile(FALL0, pal), compile(FALL1, pal)];
   art.branch = compile([
     '..K....KK.',
     '.KbK..KbK.',
@@ -547,6 +603,7 @@ function buildArt() {
   art.crowFly0 = compile(['K...K', 'KK.KK', '.KKK.', '.KeK.'], { 'K': '#191420', 'e': '#ff6a4a' });
   art.crowFly1 = compile(['.KKK.', 'KKKKK', '.KeK.', '.....'], { 'K': '#191420', 'e': '#ff6a4a' });
   art.shoes = compile(['..K..', '..K..', '..K..', '.K.K.', '.KKK.', '.K.K.'], { 'K': '#221a26' });
+  artCache[outfitId] = art;
   return art;
 }
 
@@ -1370,7 +1427,12 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-var art = buildArt();
+var sparkBank = 0, ownedOutfits = ['detective'], equippedOutfit = 'detective', wardrobe = false, wardrobeMsg = '', wardrobeMsgT = 0;
+
+loadWardrobe();
+if (qs.get('outfit')) equippedOutfit = OUTFITS[qs.get('outfit')] ? qs.get('outfit') : equippedOutfit;
+if (qs.get('wardrobe')) wardrobe = true;
+var art = buildArt(equippedOutfit);
 var city = buildCity(20240);
 var frameC = buildFrame(makeRng(9));
 var glassC = buildGlass(makeRng(5));
@@ -1395,6 +1457,41 @@ var ai = { jumps: 0, drops: 0 };
 
 function loadBest() { try { return parseInt(localStorage.getItem('lj_best') || '0', 10) || 0; } catch (e) { return 0; } }
 function saveBest(v) { try { localStorage.setItem('lj_best', String(v)); } catch (e) { } }
+function lsGet(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) { } }
+
+
+function loadWardrobe() {
+  sparkBank = parseInt(lsGet('lj_sparks', '0'), 10) || 0;
+  ownedOutfits = String(lsGet('lj_owned', 'detective')).split(',');
+  ownedOutfits = ownedOutfits.filter(function (s) { return !!OUTFITS[s]; });
+  if (ownedOutfits.indexOf('detective') < 0) ownedOutfits.unshift('detective');
+  var eq = lsGet('lj_outfit', 'detective');
+  equippedOutfit = OUTFITS[eq] ? eq : 'detective';
+}
+function saveWardrobe() {
+  lsSet('lj_sparks', sparkBank);
+  lsSet('lj_owned', ownedOutfits.join(','));
+  lsSet('lj_outfit', equippedOutfit);
+}
+function equipOutfit(id) {
+  var of = OUTFITS[id];
+  if (!of) return;
+  if (ownedOutfits.indexOf(id) < 0) {
+    if (sparkBank < of.price) {
+      wardrobeMsg = 'NEED ' + (of.price - sparkBank) + ' MORE SPARKS';
+      wardrobeMsgT = 1.8;
+      audio.ui();
+      return;
+    }
+    sparkBank -= of.price;
+    ownedOutfits.push(id);
+    audio.stunt();
+  } else audio.ui();
+  equippedOutfit = id;
+  art = buildArt(id);
+  saveWardrobe();
+}
 
 function decoY(lvl, x) {
   var period = 118 + lvl * 21;
@@ -1564,6 +1661,8 @@ function gameOver(kind) {
   audio.crash();
   shakeT = 0.5; shakeA = 3.5; flashT = 0.22;
   burst(player.x, player.y - 10, kind === 'hit' ? '#ffd27a' : '#ff7a5a', 16, 90);
+  sparkBank += sparks;
+  saveWardrobe();
   finalScore = { dist: distM(), sparks: sparks, stunts: stunts, ups: ups, total: totalScore() };
   var b = loadBest();
   if (finalScore.total > b) { saveBest(finalScore.total); best = finalScore.total; newBest = true; }
@@ -1817,6 +1916,7 @@ function stepSim(dt) {
     overT += dt;
     updatePlayer(dt); updateEntities(dt);
   }
+  if (wardrobeMsgT > 0) wardrobeMsgT -= dt;
   updateTail(dt);
   updateCamera(dt);
   input.jump = false; input.down = false;
@@ -2151,6 +2251,52 @@ function drawTitle() {
   drawTextCenter(g, 'SPACE JUMP   DOWN DROP   M MUTE   R RESTART', W / 2, cy + 68, '#7f7098', 1);
   drawTextCenter(g, 'HOLD JUMP TO REACH THE LINE ABOVE', W / 2, cy + 79, '#9fb6d8', 1);
   if (Math.floor(T * 2) % 2) drawTextCenter(g, 'PRESS SPACE OR TAP TO RIDE', W / 2, cy + 92, '#ffe9a8', 1);
+  var ow = OUTFITS[equippedOutfit];
+  drawSparkIcon(g, 30, 34);
+  drawText(g, '' + sparkBank, 41, 34, '#8ff0ff', 1);
+  drawText(g, 'OUTFIT ' + (ow ? ow.name : '?'), 30, 46, '#8f86a8', 1);
+  drawText(g, '[C] WARDROBE', 30, 56, '#6f6480', 1);
+  if (wardrobe) drawWardrobe();
+  if (wardrobeMsgT > 0) drawTextCenter(g, wardrobeMsg, W / 2, 154, '#ffb0b0', 1);
+}
+
+function drawWardrobe() {
+  g.globalAlpha = 0.97;
+  g.fillStyle = '#0b0816';
+  g.fillRect(36, 44, W - 72, 104);
+  g.globalAlpha = 1;
+  rect(g, 36, 44, W - 72, 1, '#4a3f5e');
+  rect(g, 36, 147, W - 72, 1, '#4a3f5e');
+  drawTextCenter(g, 'WARDROBE', W / 2, 50, '#ffe9a8', 1);
+  drawSparkIcon(g, 150, 50);
+  drawText(g, '' + sparkBank, 161, 50, '#8ff0ff', 1);
+  for (var i = 0; i < OUTFIT_IDS.length; i++) {
+    var id = OUTFIT_IDS[i], of = OUTFITS[id];
+    var y = 64 + i * 22;
+    var owned = ownedOutfits.indexOf(id) >= 0;
+    var eq = equippedOutfit === id;
+    g.globalAlpha = eq ? 0.22 : 0.12;
+    g.fillStyle = eq ? '#8ff0ff' : '#4a4060';
+    g.fillRect(42, y - 2, W - 84, 20);
+    g.globalAlpha = 1;
+    drawText(g, (i + 1) + '  ' + of.name, 48, y + 2, eq ? '#ffffff' : '#cfe0f0', 1);
+    var sw = of.pal && of.pal.C ? of.pal.C : '#f0e0bd';
+    rect(g, 168, y, 14, 14, sw);
+    rect(g, 168, y, 14, 1, '#0b0816');
+    rect(g, 182, y, 1, 14, '#0b0816');
+    var state = eq ? 'EQUIPPED' : (owned ? 'OWNED - PRESS ' + (i + 1) : of.price + ' SPARKS');
+    drawText(g, state, 190, y + 4, eq ? '#9fffa8' : (owned ? '#cfe0f0' : '#ffd27a'), 1);
+    var hat = HATS[of.hat], hpal = outfitPalette(id);
+    for (var r = 0; r < hat.length; r++) {
+      for (var c = 0; c < hat[r].length; c++) {
+        var ch = hat[r][c];
+        if (ch === '.') continue;
+        var col = hpal[ch];
+        if (col) { g.fillStyle = col; g.fillRect(228 + c * 4, y + r * 5, 4, 5); }
+      }
+    }
+  }
+  drawTextCenter(g, '1-3 BUY / EQUIP      C  CLOSE', W / 2, 138, '#8f86a8', 1);
 }
 
 function drawOver() {
@@ -2466,7 +2612,15 @@ function onKey(e, down) {
     return;
   }
   if (!down) return;
+  if (wardrobe && state === 'title') {
+    if (code === 'Digit1') { equipOutfit(OUTFIT_IDS[0]); return; }
+    if (code === 'Digit2') { equipOutfit(OUTFIT_IDS[1]); return; }
+    if (code === 'Digit3') { equipOutfit(OUTFIT_IDS[2]); return; }
+    if (code === 'KeyC' || code === 'Escape') { wardrobe = false; audio.ui(); return; }
+    return;
+  }
   if (code === 'KeyM') { audio.init(); audio.toggleMute(); }
+  if (code === 'KeyC' && state === 'title') { wardrobe = !wardrobe; audio.ui(); return; }
   if (code === 'KeyR') startGame();
   if (code === 'Escape' || code === 'KeyP') {
     if (state === 'play') {

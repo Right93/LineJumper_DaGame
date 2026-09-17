@@ -867,17 +867,17 @@ function buildLakeGround(rng) {
 
 var THEMES = {
   shitamachi: {
-    name: 'SHITAMACHI DUSK', rain: 0.8, mist: 0, cars: true, poleGap: 1, poleStyle: 'concrete',
+    name: 'SHITAMACHI DUSK', swatch: ['#2b1640', '#1a1226', '#ff2f7e'], rain: 0.8, mist: 0, cars: true, poleGap: 1, poleStyle: 'concrete',
     wire: { main: '#333c58', mainHi: '#7d8cb5', deco: '#0d0c16', decoHi: '#2c3348' },
     sky: buildSky, far: buildFar, mid: buildMid, near: buildNear, ground: buildStreet
   },
   farmland: {
-    name: 'FARMLAND GOLD', rain: 0, mist: 0.15, cars: false, poleGap: 1.42, poleStyle: 'wood',
+    name: 'FARMLAND GOLD', swatch: ['#a8c4d4', '#d8b878', '#5f8250'], rain: 0, mist: 0.15, cars: false, poleGap: 1.42, poleStyle: 'wood',
     wire: { main: '#6a6046', mainHi: '#c8b888', deco: '#544c3a', decoHi: '#9a9070' },
     sky: buildFieldSky, far: buildFieldFar, mid: buildFieldMid, near: buildFieldNear, ground: buildFieldGround
   },
   lake: {
-    name: 'LAKE AND MOUNTAINS', rain: 0, mist: 0.45, cars: false, poleGap: 1.25, poleStyle: 'steel',
+    name: 'LAKE AND MOUNTAINS', swatch: ['#3a6288', '#5e7888', '#2e4a5e'], rain: 0, mist: 0.45, cars: false, poleGap: 1.25, poleStyle: 'steel',
     wire: { main: '#546a78', mainHi: '#b8d0d8', deco: '#3e4f5a', decoHi: '#8ba4b0' },
     sky: buildLakeSky, far: buildLakeFar, mid: buildLakeMid, near: buildLakeNear, ground: buildLakeGround
   }

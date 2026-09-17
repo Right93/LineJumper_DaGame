@@ -61,6 +61,14 @@ function lsGet(k, d) { try { var v = localStorage.getItem(k); return v === null 
 function lsSet(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) { } }
 
 
+function setScenery(id) {
+  if (!THEMES[id] || id === scenery) { audio.ui(); return; }
+  scenery = id;
+  city = buildCity(20240, scenery);
+  lsSet('lj_scenery', scenery);
+  audio.stunt();
+}
+
 function loadWardrobe() {
   sparkBank = parseInt(lsGet('lj_sparks', '0'), 10) || 0;
   ownedOutfits = String(lsGet('lj_owned', 'detective')).split(',');
@@ -883,48 +891,67 @@ function drawTitle() {
   drawSparkIcon(g, 30, 34);
   drawText(g, '' + sparkBank, 41, 34, '#8ff0ff', 1);
   drawText(g, 'OUTFIT ' + (ow ? ow.name : '?'), 30, 46, '#8f86a8', 1);
-  drawText(g, '[C] WARDROBE', 30, 56, '#6f6480', 1);
-  if (wardrobe) drawWardrobe();
+  drawText(g, '[C] CUSTOMISE', 30, 56, '#6f6480', 1);
+  drawText(g, '[V] NEXT BACKGROUND', 30, 66, '#6f6480', 1);
+  if (wardrobe) drawCustomise();
   if (wardrobeMsgT > 0) drawTextCenter(g, wardrobeMsg, W / 2, 154, '#ffb0b0', 1);
 }
 
-function drawWardrobe() {
+function drawCustomise() {
   g.globalAlpha = 0.97;
   g.fillStyle = '#0b0816';
-  g.fillRect(36, 44, W - 72, 104);
+  g.fillRect(22, 14, W - 44, 188);
   g.globalAlpha = 1;
-  rect(g, 36, 44, W - 72, 1, '#4a3f5e');
-  rect(g, 36, 147, W - 72, 1, '#4a3f5e');
-  drawTextCenter(g, 'WARDROBE', W / 2, 50, '#ffe9a8', 1);
-  drawSparkIcon(g, 150, 50);
-  drawText(g, '' + sparkBank, 161, 50, '#8ff0ff', 1);
+  rect(g, 22, 14, W - 44, 1, '#4a3f5e');
+  rect(g, 22, 201, W - 44, 1, '#4a3f5e');
+  drawTextCenter(g, 'CUSTOMISE', W / 2, 20, '#ffe9a8', 1);
+  drawSparkIcon(g, 236, 20);
+  drawText(g, '' + sparkBank, 247, 20, '#8ff0ff', 1);
+
+  drawText(g, 'CHARACTER', 30, 36, '#9fb6d8', 1);
   for (var i = 0; i < OUTFIT_IDS.length; i++) {
     var id = OUTFIT_IDS[i], of = OUTFITS[id];
-    var y = 64 + i * 22;
+    var y = 48 + i * 18;
     var owned = ownedOutfits.indexOf(id) >= 0;
     var eq = equippedOutfit === id;
-    g.globalAlpha = eq ? 0.22 : 0.12;
+    g.globalAlpha = eq ? 0.26 : 0.1;
     g.fillStyle = eq ? '#8ff0ff' : '#4a4060';
-    g.fillRect(42, y - 2, W - 84, 20);
+    g.fillRect(26, y - 3, W - 52, 17);
     g.globalAlpha = 1;
-    drawText(g, (i + 1) + '  ' + of.name, 48, y + 2, eq ? '#ffffff' : '#cfe0f0', 1);
-    var sw = of.pal && of.pal.C ? of.pal.C : '#f0e0bd';
-    rect(g, 168, y, 14, 14, sw);
-    rect(g, 168, y, 14, 1, '#0b0816');
-    rect(g, 182, y, 1, 14, '#0b0816');
-    var state = eq ? 'EQUIPPED' : (owned ? 'OWNED - PRESS ' + (i + 1) : of.price + ' SPARKS');
-    drawText(g, state, 190, y + 4, eq ? '#9fffa8' : (owned ? '#cfe0f0' : '#ffd27a'), 1);
-    var hat = HATS[of.hat], hpal = outfitPalette(id);
+    drawText(g, (i + 1) + '  ' + of.name, 32, y, eq ? '#ffffff' : '#cfe0f0', 1);
+    var pal = outfitPalette(id);
+    rect(g, 104, y - 2, 12, 12, pal.C);
+    rect(g, 104, y - 2, 12, 1, '#0b0816');
+    var hat = HATS[of.hat];
     for (var r = 0; r < hat.length; r++) {
       for (var c = 0; c < hat[r].length; c++) {
         var ch = hat[r][c];
         if (ch === '.') continue;
-        var col = hpal[ch];
-        if (col) { g.fillStyle = col; g.fillRect(228 + c * 4, y + r * 5, 4, 5); }
+        var col = pal[ch];
+        if (col) { g.fillStyle = col; g.fillRect(120 + c * 3, y - 2 + r * 4, 3, 4); }
       }
     }
+    var state = eq ? 'EQUIPPED' : (owned ? 'OWNED - PRESS ' + (i + 1) : of.price + ' SPARKS');
+    drawText(g, state, 152, y, eq ? '#9fffa8' : (owned ? '#cfe0f0' : '#ffd27a'), 1);
   }
-  drawTextCenter(g, '1-3 BUY / EQUIP      C  CLOSE', W / 2, 138, '#8f86a8', 1);
+
+  drawText(g, 'BACKGROUND', 30, 112, '#9fb6d8', 1);
+  for (var k = 0; k < THEME_IDS.length; k++) {
+    var tid = THEME_IDS[k], th = THEMES[tid];
+    var ty = 124 + k * 18;
+    var sel = scenery === tid;
+    g.globalAlpha = sel ? 0.26 : 0.1;
+    g.fillStyle = sel ? '#8ff0ff' : '#4a4060';
+    g.fillRect(26, ty - 3, W - 52, 17);
+    g.globalAlpha = 1;
+    drawText(g, (k + 4) + '  ' + th.name, 32, ty, sel ? '#ffffff' : '#cfe0f0', 1);
+    var sw = th.swatch || ['#333', '#555', '#777'];
+    for (var b = 0; b < 3; b++) rect(g, 196 + b * 12, ty - 2, 12, 12, sw[b]);
+    rect(g, 196, ty - 2, 36, 1, '#0b0816');
+    rect(g, 196, ty + 9, 36, 1, '#0b0816');
+    drawText(g, sel ? 'SELECTED' : 'PRESS ' + (k + 4), 240, ty, sel ? '#9fffa8' : '#cfe0f0', 1);
+  }
+  drawTextCenter(g, '1-3 OUTFIT    4-6 BACKGROUND    C CLOSE', W / 2, 190, '#8f86a8', 1);
 }
 
 function drawOver() {
@@ -1245,16 +1272,16 @@ function onKey(e, down) {
     if (code === 'Digit1') { equipOutfit(OUTFIT_IDS[0]); return; }
     if (code === 'Digit2') { equipOutfit(OUTFIT_IDS[1]); return; }
     if (code === 'Digit3') { equipOutfit(OUTFIT_IDS[2]); return; }
+    if (code === 'Digit4') { setScenery(THEME_IDS[0]); return; }
+    if (code === 'Digit5') { setScenery(THEME_IDS[1]); return; }
+    if (code === 'Digit6') { setScenery(THEME_IDS[2]); return; }
     if (code === 'KeyC' || code === 'Escape') { wardrobe = false; audio.ui(); return; }
     return;
   }
   if (code === 'KeyM') { audio.init(); audio.toggleMute(); }
   if (code === 'KeyV' && state === 'title') {
     var idx = THEME_IDS.indexOf(scenery);
-    scenery = THEME_IDS[(idx + 1) % THEME_IDS.length];
-    city = buildCity(20240, scenery);
-    lsSet('lj_scenery', scenery);
-    audio.ui();
+    setScenery(THEME_IDS[(idx + 1) % THEME_IDS.length]);
     return;
   }
   if (code === 'KeyC' && state === 'title') { wardrobe = !wardrobe; audio.ui(); return; }

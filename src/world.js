@@ -461,17 +461,441 @@ function buildGlass(rng) {
   return c;
 }
 
-function buildCity(seed) {
+/* ============================ scenery themes ============================
+   Every scenery is a module of the same shape: sky / far / mid / near /
+   ground tile builders plus a few flags. The render pipeline, the parallax
+   draw and the wire/pole layout are shared - a scenery only swaps the asset
+   set and the palette, never the gameplay geometry.
+
+   Art direction for the newer sets: soft painterly colour grading, warm
+   natural light, lush and slightly idealised - gentle gradients, rounded
+   organic masses and haze between layers instead of hard neon edges. */
+
+function gradRows(g, y0, y1, w, stops) {
+  for (var y = y0; y < y1; y++) {
+    var t = (y - y0) / Math.max(1, y1 - y0 - 1);
+    g.fillStyle = skyColorAt2(stops, t);
+    g.fillRect(0, y, w, 1);
+  }
+}
+
+function skyColorAt2(stops, t) {
+  for (var i = 0; i < stops.length - 1; i++) {
+    var a = stops[i], b = stops[i + 1];
+    if (t >= a[0] && t <= b[0]) return lerpColor(a[1], b[1], (t - a[0]) / Math.max(0.0001, b[0] - a[0]));
+  }
+  return stops[stops.length - 1][1];
+}
+
+function softGlow(g, x, y, r, col, aMax) {
+  for (var i = 4; i >= 1; i--) {
+    g.globalAlpha = aMax * (i / 4);
+    g.fillStyle = col;
+    g.beginPath(); g.arc(x, y, r * (0.35 + i * 0.2), 0, 7); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+
+function blob(g, x, y, w, h, col) {
+  g.fillStyle = col;
+  g.beginPath();
+  g.ellipse(x, y, w / 2, h / 2, 0, 0, 7);
+  g.fill();
+}
+
+function hill(g, x, baseY, w, h, col) {
+  g.fillStyle = col;
+  g.beginPath();
+  g.moveTo(x - w / 2, baseY);
+  g.quadraticCurveTo(x - w * 0.22, baseY - h, x, baseY - h);
+  g.quadraticCurveTo(x + w * 0.22, baseY - h, x + w / 2, baseY);
+  g.closePath();
+  g.fill();
+}
+
+function hazeBand(g, y0, y1, col, aTop, aBot) {
+  var grd = g.createLinearGradient(0, y0, 0, y1);
+  grd.addColorStop(0, 'rgba(0,0,0,0)');
+  grd.addColorStop(0.5, col);
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  g.globalAlpha = aTop;
+  g.fillStyle = grd;
+  g.fillRect(0, y0, 2048, y1 - y0);
+  g.globalAlpha = 1;
+}
+
+/* ---------------- scenery 2: farmland at golden hour ---------------- */
+
+var FIELD_STOPS = [
+  [0.00, '#7ea6c8'], [0.22, '#a8c4d4'], [0.42, '#d8d8bc'],
+  [0.60, '#f0d8a0'], [0.74, '#e8b878'], [0.86, '#d89858'], [1.00, '#b87840']
+];
+
+function buildFieldSky(rng) {
+  var c = newCanvas(W, H), g = ctxOf(c);
+  gradRows(g, 0, H, W, FIELD_STOPS);
+  softGlow(g, 108, 150, 40, '#ffe0a8', 0.5);
+  g.fillStyle = '#fff0c8';
+  g.beginPath(); g.arc(108, 150, 14, 0, 7); g.fill();
+  for (var i = 0; i < 7; i++) {
+    var cx = rng.int(-20, W), cy = rng.int(24, 118), cw = rng.int(50, 150);
+    g.globalAlpha = 0.5;
+    blob(g, cx, cy, cw, 10, '#fff4dc');
+    blob(g, cx + cw * 0.3, cy - 5, cw * 0.7, 9, '#ffeccc');
+    g.globalAlpha = 1;
+  }
+  for (var b = 0; b < 9; b++) {
+    var bx = rng.int(0, W), by = rng.int(30, 90), s = rng.int(2, 4);
+    g.fillStyle = '#6a5a48';
+    g.fillRect(bx, by, s, 1);
+    g.fillRect(bx + s, by - 1, s, 1);
+    g.fillRect(bx, by - 2, s, 1);
+  }
+  return c;
+}
+
+function buildFieldFar(rng) {
+  var TW = 1536, c = newCanvas(TW, H), g = ctxOf(c);
+  var i;
+  for (i = 0; i < 22; i++) {
+    var hx = rng.int(-40, TW), hw = rng.int(140, 380), hh = rng.int(26, 62);
+    hill(g, hx, 172, hw, hh, '#9ab0a4');
+  }
+  hill(g, rng.int(200, TW - 200), 172, rng.int(300, 520), rng.int(60, 96), '#8aa2a0');
+  for (i = 0; i < 40; i++) {
+    var tx = rng.int(0, TW), ty = rng.int(140, 170);
+    blob(g, tx, ty, rng.int(10, 22), rng.int(8, 14), rng.pick(['#7d9a86', '#6f8e7c', '#88a68e']));
+  }
+  hazeBand(g, 120, 178, 'rgba(240,220,180,0.55)', 1, 1);
+  return c;
+}
+
+function buildFieldMid(rng) {
+  var TW = 1152, c = newCanvas(TW, H), g = ctxOf(c);
+  var vents = [];
+  var i;
+  for (i = 0; i < 7; i++) {
+    var px0 = rng.int(0, TW), pw = rng.int(120, 260), ph = rng.int(18, 34);
+    var y = 176 + rng.int(0, 10);
+    for (var b = 0; b < 4; b++) {
+      g.fillStyle = ['#c8b878', '#b8a868', '#a89858', '#98884c'][b];
+      g.fillRect(px0, y + b * 4, pw, 4);
+    }
+    for (var ry = 0; ry < 3; ry++) {
+      g.globalAlpha = 0.35;
+      g.fillStyle = '#e0d090';
+      g.fillRect(px0 + rng.int(0, 20), y + ry * 4 + 2, pw - rng.int(0, 40), 1);
+      g.globalAlpha = 1;
+    }
+    if (ph > 24) {
+      for (var cr = px0 + 10; cr < px0 + pw - 10; cr += 7) {
+        g.fillStyle = '#8a9a50';
+        g.fillRect(cr, y + rng.int(0, 10), 3, 2);
+      }
+    }
+  }
+  for (i = 0; i < 5; i++) {
+    var fx = rng.int(40, TW - 80), fy = rng.int(150, 166);
+    var fw = rng.int(26, 44), fh = rng.int(12, 18);
+    g.fillStyle = '#e8dcc0';
+    g.fillRect(fx, fy, fw, fh);
+    g.fillStyle = '#c8b898';
+    g.fillRect(fx, fy + fh - 3, fw, 3);
+    g.fillStyle = '#5a5a68';
+    g.beginPath();
+    g.moveTo(fx - 3, fy);
+    g.lineTo(fx + fw / 2, fy - rng.int(6, 11));
+    g.lineTo(fx + fw + 3, fy);
+    g.closePath(); g.fill();
+    g.fillStyle = '#ffe0a0';
+    g.fillRect(fx + rng.int(3, fw - 8), fy + 4, 3, 3);
+    if (rng.chance(0.6)) {
+      g.fillStyle = '#8a7a68';
+      g.fillRect(fx + fw - 8, fy - rng.int(10, 14), 3, 8);
+      vents.push({ x: fx + fw - 7, y: fy - 12 });
+    }
+  }
+  for (i = 0; i < 26; i++) {
+    var tx2 = rng.int(0, TW), ty2 = rng.int(150, 180), s2 = rng.int(12, 26);
+    g.fillStyle = '#6a5a3c';
+    g.fillRect(tx2, ty2, 2, 10);
+    blob(g, tx2, ty2 - 2, s2, s2 * 0.8, '#5f8250');
+    blob(g, tx2 - s2 * 0.2, ty2 - 5, s2 * 0.7, s2 * 0.6, '#6f9258');
+  }
+  var cxx = rng.int(60, TW - 60), cyy = 168;
+  g.fillStyle = '#7a6a4a';
+  g.fillRect(cxx, cyy - 14, 2, 16);
+  g.fillRect(cxx - 5, cyy - 11, 12, 2);
+  g.fillStyle = '#c8a860';
+  g.fillRect(cxx - 4, cyy - 12, 6, 6);
+  g.fillStyle = '#8a5a3a';
+  g.fillRect(cxx - 5, cyy - 16, 8, 4);
+  var cowx = rng.int(80, TW - 80);
+  g.fillStyle = '#6a5a58';
+  blob(g, cowx, 172, 16, 9, '#6a5a58');
+  g.fillRect(cowx - 6, 175, 2, 5);
+  g.fillRect(cowx + 4, 175, 2, 5);
+  blob(g, cowx + 9, 170, 6, 6, '#7a6a68');
+  for (i = 0; i < 9; i++) {
+    var wx = rng.int(0, TW), wy = rng.int(120, 160), ws = rng.int(30, 80);
+    g.globalAlpha = 0.5;
+    g.fillStyle = '#ffffff';
+    g.fillRect(wx, wy, ws, 1);
+    g.fillRect(wx + 4, wy + 1, 2, 1);
+    g.globalAlpha = 1;
+  }
+  hazeBand(g, 140, 190, 'rgba(255,230,180,0.45)', 1, 1);
+  return { c: c, vents: vents };
+}
+
+function buildFieldNear(rng) {
+  var TW = 768, c = newCanvas(TW, H), g = ctxOf(c);
+  var i;
+  for (i = 0; i < 26; i++) {
+    var x = rng.int(0, TW), w = rng.int(30, 90);
+    g.fillStyle = rng.pick(['#5a7a48', '#4e6c40', '#66854e']);
+    for (var b = 0; b < 3; b++) g.fillRect(x, 190 + b * 8, w, 8);
+  }
+  for (i = 0; i < 90; i++) {
+    var gx = rng.int(0, TW), gy = rng.int(182, 214);
+    g.fillStyle = rng.pick(['#6f8f52', '#7fa05c', '#54704a']);
+    g.fillRect(gx, gy, 2, 6);
+    g.fillRect(gx + rng.int(-2, 2), gy + 2, 1, 4);
+  }
+  for (i = 0; i < 5; i++) {
+    var fx2 = rng.int(0, TW), fw2 = rng.int(40, 90);
+    g.fillStyle = '#7a6a50';
+    g.fillRect(fx2, 186, fw2, 3);
+    g.fillRect(fx2 + 4, 189, 3, 12);
+    g.fillRect(fx2 + fw2 - 8, 189, 3, 12);
+  }
+  return c;
+}
+
+function buildFieldGround(rng) {
+  var TW = 768, hgt = 30, c = newCanvas(TW, hgt), g = ctxOf(c);
+  for (var b = 0; b < 6; b++) {
+    g.fillStyle = ['#a89660', '#9a8854', '#8c7c4c', '#7e7046', '#726642', '#665c3c'][b];
+    g.fillRect(0, b * 5, TW, 5);
+  }
+  for (var x = 0; x < TW; x += 3) {
+    g.globalAlpha = 0.25;
+    g.fillStyle = '#c8b878';
+    g.fillRect(x, rng.int(0, 6), 2, 1);
+    g.globalAlpha = 1;
+  }
+  for (var i = 0; i < 40; i++) {
+    var gx = rng.int(0, TW), gy = rng.int(2, 26);
+    g.fillStyle = rng.pick(['#6f8f52', '#7fa05c', '#8fae64']);
+    g.fillRect(gx, gy, 2, 4);
+  }
+  return c;
+}
+
+/* ---------------- scenery 3: lake and mountains ---------------- */
+
+var LAKE_STOPS = [
+  [0.00, '#1f3a5c'], [0.24, '#3a6288'], [0.46, '#6f98b4'],
+  [0.64, '#a8c4d0'], [0.78, '#d0dcd8'], [1.00, '#b8c8c0']
+];
+
+function buildLakeSky(rng) {
+  var c = newCanvas(W, H), g = ctxOf(c);
+  gradRows(g, 0, H, W, LAKE_STOPS);
+  softGlow(g, 300, 56, 30, '#e8f0f8', 0.45);
+  g.fillStyle = '#f4f8f8';
+  g.beginPath(); g.arc(300, 56, 11, 0, 7); g.fill();
+  for (var i = 0; i < 46; i++) {
+    g.globalAlpha = 0.25 + rng.next() * 0.4;
+    g.fillStyle = '#eaf2f8';
+    g.fillRect(rng.int(0, W), rng.int(4, 70), 1, 1);
+    g.globalAlpha = 1;
+  }
+  for (var k = 0; k < 6; k++) {
+    var cx = rng.int(-20, W), cy = rng.int(30, 100);
+    g.globalAlpha = 0.42;
+    blob(g, cx, cy, rng.int(60, 150), 9, '#ffffff');
+    g.globalAlpha = 1;
+  }
+  for (var b = 0; b < 7; b++) {
+    var bx = rng.int(0, W), by = rng.int(20, 80), s = rng.int(3, 5);
+    g.fillStyle = '#3a4a5a';
+    g.fillRect(bx, by, s, 1);
+    g.fillRect(bx + s, by - 2, s, 1);
+    g.fillRect(bx + s * 2, by, s, 1);
+  }
+  return c;
+}
+
+function buildLakeFar(rng) {
+  var TW = 1536, c = newCanvas(TW, H), g = ctxOf(c);
+  var i, x;
+  for (x = 0; x < TW; x += 120) {
+    hill(g, x + rng.int(-30, 30), 170, rng.int(220, 380), rng.int(40, 76), '#9fb4c0');
+  }
+  for (x = 0; x < TW; x += 150) {
+    hill(g, x + rng.int(-40, 40), 172, rng.int(180, 320), rng.int(58, 104), '#7e98a8');
+  }
+  for (i = 0; i < 9; i++) {
+    var mx = rng.int(60, TW - 60), mh = rng.int(80, 132), mw = rng.int(140, 240);
+    hill(g, mx, 174, mw, mh, '#5e7888');
+    g.fillStyle = '#e8f0f4';
+    g.beginPath();
+    g.moveTo(mx - mw * 0.09, 174 - mh * 0.84);
+    g.lineTo(mx, 174 - mh - 4);
+    g.lineTo(mx + mw * 0.09, 174 - mh * 0.84);
+    g.closePath(); g.fill();
+  }
+  hazeBand(g, 120, 176, 'rgba(210,228,236,0.6)', 1, 1);
+  return c;
+}
+
+function buildLakeMid(rng) {
+  var TW = 1152, c = newCanvas(TW, H), g = ctxOf(c);
+  var vents = [];
+  var i;
+  g.fillStyle = '#4e6a78';
+  g.fillRect(0, 170, TW, 12);
+  g.fillStyle = '#5e7a86';
+  g.fillRect(0, 170, TW, 3);
+  var lakeY = 182;
+  var grd = g.createLinearGradient(0, lakeY, 0, 216);
+  grd.addColorStop(0, '#6f94a4');
+  grd.addColorStop(0.5, '#3e5e72');
+  grd.addColorStop(1, '#2a4254');
+  g.fillStyle = grd;
+  g.fillRect(0, lakeY, TW, 216 - lakeY);
+  for (i = 0; i < 90; i++) {
+    var rx = rng.int(0, TW), ry = rng.int(lakeY + 2, 214);
+    g.globalAlpha = 0.12 + rng.next() * 0.22;
+    g.fillStyle = '#cfe4ec';
+    g.fillRect(rx, ry, rng.int(6, 30), 1);
+    g.globalAlpha = 1;
+  }
+  for (i = 0; i < 3; i++) {
+    var sx = rng.int(80, TW - 80);
+    g.globalAlpha = 0.22;
+    g.fillStyle = '#e8f4f8';
+    g.fillRect(sx, lakeY, rng.int(6, 16), 30);
+    g.globalAlpha = 1;
+  }
+  for (i = 0; i < 30; i++) {
+    var tx = rng.int(0, TW), s = rng.int(10, 22);
+    g.fillStyle = '#3a4a42';
+    g.fillRect(tx, 162, 2, 10);
+    g.beginPath();
+    g.moveTo(tx - s / 2, 164);
+    g.lineTo(tx + 1, 164 - s);
+    g.lineTo(tx + s / 2, 164);
+    g.closePath(); g.fill();
+    g.fillStyle = '#46604e';
+    g.beginPath();
+    g.moveTo(tx - s / 2.6, 166);
+    g.lineTo(tx + 1, 166 - s * 0.8);
+    g.lineTo(tx + s / 2.6, 166);
+    g.closePath(); g.fill();
+  }
+  var torx = rng.int(200, TW - 200);
+  g.fillStyle = '#a8503c';
+  g.fillRect(torx - 12, 150, 3, 22);
+  g.fillRect(torx + 9, 150, 3, 22);
+  g.fillRect(torx - 20, 150, 40, 3);
+  g.fillRect(torx - 16, 158, 32, 2);
+  g.fillStyle = '#7e3a2c';
+  g.fillRect(torx - 20, 152, 40, 1);
+  var dockx = rng.int(120, TW - 120);
+  g.fillStyle = '#5a4632';
+  g.fillRect(dockx, 176, 54, 3);
+  g.fillRect(dockx + 4, 179, 3, 10);
+  g.fillRect(dockx + 46, 179, 3, 10);
+  g.fillStyle = '#6d5540';
+  for (var d = 0; d < 6; d++) g.fillRect(dockx + 2 + d * 9, 173, 3, 3);
+  hazeBand(g, 140, 186, 'rgba(220,236,240,0.5)', 1, 1);
+  return { c: c, vents: vents };
+}
+
+function buildLakeNear(rng) {
+  var TW = 768, c = newCanvas(TW, H), g = ctxOf(c);
+  var i;
+  for (i = 0; i < 30; i++) {
+    var x = rng.int(0, TW), s = rng.int(14, 30);
+    g.fillStyle = '#2c3e3a';
+    g.fillRect(x, 190, 2, 26);
+    g.beginPath();
+    g.moveTo(x - s / 2, 192);
+    g.lineTo(x + 1, 192 - s);
+    g.lineTo(x + s / 2, 192);
+    g.closePath(); g.fill();
+    g.fillStyle = '#354c42';
+    g.beginPath();
+    g.moveTo(x - s / 3, 196);
+    g.lineTo(x + 1, 196 - s * 0.8);
+    g.lineTo(x + s / 3, 196);
+    g.closePath(); g.fill();
+  }
+  for (i = 0; i < 50; i++) {
+    var gx = rng.int(0, TW), gy = rng.int(186, 214);
+    g.fillStyle = rng.pick(['#3e5a48', '#31504a', '#4a6650']);
+    g.fillRect(gx, gy, 1, rng.int(4, 10));
+  }
+  for (i = 0; i < 6; i++) {
+    var bx = rng.int(0, TW), bw = rng.int(20, 46);
+    blob(g, bx, 208, bw, 14, '#3a4448');
+  }
+  return c;
+}
+
+function buildLakeGround(rng) {
+  var TW = 768, hgt = 30, c = newCanvas(TW, hgt), g = ctxOf(c);
+  var grd = g.createLinearGradient(0, 0, 0, hgt);
+  grd.addColorStop(0, '#3e5e72');
+  grd.addColorStop(0.6, '#2e4a5e');
+  grd.addColorStop(1, '#24384a');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, TW, hgt);
+  for (var i = 0; i < 90; i++) {
+    g.globalAlpha = 0.1 + rng.next() * 0.2;
+    g.fillStyle = '#cfe4ec';
+    g.fillRect(rng.int(0, TW), rng.int(1, hgt - 1), rng.int(5, 26), 1);
+    g.globalAlpha = 1;
+  }
+  return c;
+}
+
+/* ---------------------------- theme registry ---------------------------- */
+
+var THEMES = {
+  shitamachi: {
+    name: 'SHITAMACHI DUSK', rain: 0.8, mist: 0, cars: true, poleGap: 1, poleStyle: 'concrete',
+    wire: { main: '#333c58', mainHi: '#7d8cb5', deco: '#0d0c16', decoHi: '#2c3348' },
+    sky: buildSky, far: buildFar, mid: buildMid, near: buildNear, ground: buildStreet
+  },
+  farmland: {
+    name: 'FARMLAND GOLD', rain: 0, mist: 0.15, cars: false, poleGap: 1.42, poleStyle: 'wood',
+    wire: { main: '#6a6046', mainHi: '#c8b888', deco: '#544c3a', decoHi: '#9a9070' },
+    sky: buildFieldSky, far: buildFieldFar, mid: buildFieldMid, near: buildFieldNear, ground: buildFieldGround
+  },
+  lake: {
+    name: 'LAKE AND MOUNTAINS', rain: 0, mist: 0.45, cars: false, poleGap: 1.25, poleStyle: 'steel',
+    wire: { main: '#546a78', mainHi: '#b8d0d8', deco: '#3e4f5a', decoHi: '#8ba4b0' },
+    sky: buildLakeSky, far: buildLakeFar, mid: buildLakeMid, near: buildLakeNear, ground: buildLakeGround
+  }
+};
+var THEME_IDS = ['shitamachi', 'farmland', 'lake'];
+
+function buildCity(seed, themeId) {
+  var th = THEMES[themeId] || THEMES.shitamachi;
   var rng = makeRng(seed);
-  var mid = buildMid(rng);
+  var mid = th.mid(rng);
   return {
-    sky: buildSky(rng),
-    far: buildFar(rng),
+    theme: THEMES[themeId] ? themeId : 'shitamachi',
+    def: th,
+    sky: th.sky(rng),
+    far: th.far(rng),
     mid: mid.c,
-    vents: mid.vents,
-    near: buildNear(rng),
-    street: buildStreet(rng),
+    vents: mid.vents || [],
+    near: th.near(rng),
+    street: th.ground(rng),
     tunnel: buildTunnel(rng)
   };
 }
-

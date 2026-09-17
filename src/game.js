@@ -28,8 +28,11 @@ var sparkBank = 0, ownedOutfits = ['detective'], equippedOutfit = 'detective', w
 loadWardrobe();
 if (qs.get('outfit')) equippedOutfit = OUTFITS[qs.get('outfit')] ? qs.get('outfit') : equippedOutfit;
 if (qs.get('wardrobe')) wardrobe = true;
+var scenery = lsGet('lj_scenery', 'shitamachi');
+if (qs.get('scenery') && THEMES[qs.get('scenery')]) scenery = qs.get('scenery');
+if (!THEMES[scenery]) scenery = 'shitamachi';
 var art = buildArt(equippedOutfit);
-var city = buildCity(20240);
+var city = buildCity(20240, scenery);
 var frameC = buildFrame(makeRng(9));
 var glassC = buildGlass(makeRng(5));
 
@@ -171,7 +174,7 @@ function genSpan() {
   var prev = w.spans.length ? w.spans[w.spans.length - 1].lvl : w.level;
   if (!safe && w.spans.length > 0 && rng.chance(0.24)) w.level = clamp(w.level + (rng.chance(0.5) ? 1 : -1), 0, LEVELS.length - 1);
   var lvl = w.level;
-  var len = rng.range(104, 172);
+  var len = rng.range(104, 172) * (city && city.def ? city.def.poleGap : 1);
   var x0 = w.nextX, x1 = x0 + len;
   var ramp = (lvl !== prev && !safe) ? rng.range(24, 34) : 0;
   var sag = rng.chance(0.35) ? rng.range(3.5, 7) : rng.range(1.2, 2.8);
@@ -392,7 +395,7 @@ function updateWorld(dt) {
   }
   if (tunnelNow && player.x > tunnelNow.x1 + 60) tunnelNow = null;
   audio.setRumble(tunnelAmt() > 0.5 ? 0.32 : 0.13);
-  if (tunnelAmt() < 0.5) {
+  if (tunnelAmt() < 0.5 && city.def.rain > 0) {
     boltT -= dt;
     if (boltT <= 0) {
       boltT = 9 + world.rng.range(0, 14);
@@ -455,7 +458,7 @@ function updateEntities(dt) {
     if (car.x < cam.x * 0.62 - 200) car.x += 1500;
     if (car.x > cam.x * 0.62 + 900) car.x -= 1500;
   }
-  var rTar = rainOn ? 1 : 0;
+  var rTar = (rainOn && city.def.rain > 0) ? city.def.rain : 0;
   rainFade += (rTar - rainFade) * Math.min(1, dt * 0.4);
   if (rainFade > 0.02) {
     while (drops.length < 46 * rainFade) drops.push({ x: Math.random() * (W + 120), y: Math.random() * H, l: 4 + Math.random() * 8 });
@@ -544,6 +547,7 @@ function drawPara(tile, para, y) {
 
 function drawWires() {
   var x0 = Math.floor(cam.x - 6), x1 = Math.ceil(cam.x + W + 6);
+  var wc = (city && city.def && city.def.wire) ? city.def.wire : { main: '#333c58', mainHi: '#7d8cb5', deco: '#0d0c16', decoHi: '#2c3348' };
   var tag = 0, sp = mainSpanAt(cam.x + W * 0.5);
   if (sp) tag = sp.lvl;
   for (var lvl = 0; lvl < LEVELS.length; lvl++) {
@@ -556,13 +560,13 @@ function drawWires() {
       var msp = mainSpanAt(x);
       if (msp && msp.lvl === lvl) isMain = true;
       if (isMain) {
-        g.fillStyle = '#333c58';
+        g.fillStyle = wc.main;
         g.fillRect(sx, sy, 1, 1);
-        if ((x & 7) === 0) { g.fillStyle = '#7d8cb5'; g.fillRect(sx, sy - 1, 1, 1); }
+        if ((x & 7) === 0) { g.fillStyle = wc.mainHi; g.fillRect(sx, sy - 1, 1, 1); }
       } else {
-        g.fillStyle = '#0d0c16';
+        g.fillStyle = wc.deco;
         g.fillRect(sx, sy, 1, 1);
-        if ((x % 22) === 0) { g.fillStyle = '#2c3348'; g.fillRect(sx, sy - 1, 1, 1); }
+        if ((x % 22) === 0) { g.fillStyle = wc.decoHi; g.fillRect(sx, sy - 1, 1, 1); }
       }
     }
   }
@@ -573,7 +577,7 @@ function drawWires() {
       var gy = LEVELS[gp.lvl] + (s === 0 ? -1 : 0);
       var sx2 = Math.round(gx - cam.x + cam.sway), sy2 = Math.round(gy + cam.sy);
       for (var k = 0; k < 6; k++) {
-        g.fillStyle = k < 3 ? '#333c58' : '#22283c';
+        g.fillStyle = k < 3 ? wc.main : wc.deco;
         g.fillRect(sx2 + (s === 0 ? -k : k) * 0.4, sy2 + k, 1, 1);
       }
     }
@@ -589,16 +593,28 @@ function ins(g, x, y) {
 
 function drawPoles() {
   var pl = world.poles;
+  var pst = (city && city.def) ? city.def.poleStyle : 'concrete';
+  var colA = pst === 'wood' ? '#4a3826' : (pst === 'steel' ? '#3a4450' : '#241c22');
+  var colB = pst === 'wood' ? '#5e4a32' : (pst === 'steel' ? '#4e5a68' : '#332930');
+  var colC = pst === 'wood' ? '#2c2116' : (pst === 'steel' ? '#242c36' : '#120d12');
   for (var i = 0; i < pl.length; i++) {
     var sx = Math.round(pl[i] - cam.x + cam.sway);
     if (sx < -40) continue;
     if (sx > W + 40) break;
     var oy = cam.sy;
     var topY = LEVELS[0] - 22 + oy;
-    rect(g, sx - 1, topY, 3, H - topY + 6, '#241c22');
-    rect(g, sx - 1, topY, 1, H - topY + 6, '#332930');
-    rect(g, sx + 1, topY, 1, H - topY + 6, '#120d12');
-    rect(g, sx - 2, topY - 3, 5, 3, '#2c232a');
+    rect(g, sx - 1, topY, 3, H - topY + 6, colA);
+    rect(g, sx - 1, topY, 1, H - topY + 6, colB);
+    rect(g, sx + 1, topY, 1, H - topY + 6, colC);
+    rect(g, sx - 2, topY - 3, 5, 3, colB);
+    if (pst === 'wood') {
+      rect(g, sx - 7, topY + 40, 14, 2, colC);
+      rect(g, sx - 5, topY + 74, 11, 2, colC);
+    } else if (pst === 'steel') {
+      rect(g, sx - 4, topY + 30, 9, 1, colB);
+      rect(g, sx - 4, topY + 58, 9, 1, colB);
+      rect(g, sx - 4, topY + 86, 9, 1, colB);
+    }
     for (var lvl = 0; lvl < LEVELS.length; lvl++) {
       var y = LEVELS[lvl] + 4 + oy;
       rect(g, sx - 8, y, 17, 2, '#2a2128');
@@ -676,6 +692,7 @@ function drawPicks() {
 function drawStreet() {
   var y = STREET_Y - 4 + cam.sy;
   drawPara(city.street, 0.62, y);
+  if (!city.def.cars) return;
   for (var i = 0; i < cars.length; i++) {
     var c = cars[i];
     var sx = c.x - cam.x * 0.62 + cam.sway * 0.7;
@@ -692,6 +709,20 @@ function drawStreet() {
     }
     g.globalAlpha = 0.16;
     rect(g, sx - 6, cy + 5, 13, 1, c.lane === 0 ? '#ffe9c0' : c.col);
+    g.globalAlpha = 1;
+  }
+}
+
+function drawMist() {
+  var m = (city.def && city.def.mist) ? city.def.mist : 0;
+  if (m <= 0) return;
+  for (var i = 0; i < 3; i++) {
+    var y = 118 + i * 26 + Math.sin(T * 0.18 + i * 1.7) * 3;
+    var raw = cam.x * (0.1 + i * 0.06) + T * (1 + i * 0.4);
+    var off = -(((raw % 520) + 520) % 520);
+    g.globalAlpha = m * (0.17 - i * 0.035);
+    g.fillStyle = '#e2f0f4';
+    for (var x = off - 520; x < W + 520; x += 520) g.fillRect(x, y, 520, 9 + i * 4);
     g.globalAlpha = 1;
   }
 }
@@ -848,6 +879,8 @@ function drawTitle() {
   drawTextCenter(g, 'HOLD JUMP TO REACH THE LINE ABOVE', W / 2, cy + 79, '#9fb6d8', 1);
   if (Math.floor(T * 2) % 2) drawTextCenter(g, 'PRESS SPACE OR TAP TO RIDE', W / 2, cy + 92, '#ffe9a8', 1);
   var ow = OUTFITS[equippedOutfit];
+  drawText(g, 'SCENERY ' + (city.def ? city.def.name : '?'), 30, 24, '#8f86a8', 1);
+  drawText(g, '[V] CHANGE', 30, 76, '#6f6480', 1);
   drawSparkIcon(g, 30, 34);
   drawText(g, '' + sparkBank, 41, 34, '#8ff0ff', 1);
   drawText(g, 'OUTFIT ' + (ow ? ow.name : '?'), 30, 46, '#8f86a8', 1);
@@ -943,6 +976,7 @@ function render() {
     drawPara(city.mid, 0.2, cam.sy * 0.7);
     drawStreet();
     drawPara(city.near, 1.45, cam.sy);
+    drawMist();
   }
   for (var i = 0; i < steamParts.length; i++) {
     var st = steamParts[i];
@@ -1037,6 +1071,7 @@ function drawTestReport(info) {
     'PHASE1        ' + info.deaths,
     'STREET DEATHS ' + info.street,
     'SCORE         ' + info.score,
+    'SCENERY       ' + city.def.name,
     'RUNTIME ERRS  ' + RUNTIME_ERRORS.length,
     'ART ERRS      ' + ART_ERRORS.length
   ];
@@ -1047,7 +1082,7 @@ function drawTestReport(info) {
 
 function runSelfTest() {
   reset(false); state = 'play';
-  var p1 = simulate(20);
+  var p1 = simulate(45);
   var r1 = {
     dist: distM(), jumps: player.stats.jumps, lands: player.stats.lands, gaps: player.stats.gapFalls,
     picks: player.stats.picks, st: state, deaths: (state !== 'play' ? 1 : 0)
@@ -1083,7 +1118,7 @@ function runSelfTest() {
         }
         var sp = mainSpanAt(p.x);
         if (sp && sp.obs && sp.obs.x - p.x > -20 && sp.obs.x - p.x < 170) clear = false;
-        if (sp && p.x < sp.x0 + 20) clear = false;
+        if (sp && p.x < sp.x0 + sp.ramp + 30) clear = false;
         if (clear && p.lvl > 0) {
           lastUpT = t; pendingFrom = p.lvl; upTry++;
           p.jumpBuf = JBUF;
@@ -1216,6 +1251,14 @@ function onKey(e, down) {
     return;
   }
   if (code === 'KeyM') { audio.init(); audio.toggleMute(); }
+  if (code === 'KeyV' && state === 'title') {
+    var idx = THEME_IDS.indexOf(scenery);
+    scenery = THEME_IDS[(idx + 1) % THEME_IDS.length];
+    city = buildCity(20240, scenery);
+    lsSet('lj_scenery', scenery);
+    audio.ui();
+    return;
+  }
   if (code === 'KeyC' && state === 'title') { wardrobe = !wardrobe; audio.ui(); return; }
   if (code === 'KeyR') startGame();
   if (code === 'Escape' || code === 'KeyP') {

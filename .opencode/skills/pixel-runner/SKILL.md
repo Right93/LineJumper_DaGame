@@ -155,9 +155,34 @@ level up.
     after 0.08 s so it still feels responsive.
 - Train-window framing is mandatory: riveted frame, sill and coffee cup,
   glass reflections, scene sway. The player runs *inside* the window.
-- Debug helpers that must keep working: `?mode=shot&pose=run|air|drop|fall|up|land|over|title|pause&shot=<seconds>&seed=<n>&zoom=<n>&ox=&oy=`, `?mode=test` (on-canvas self test), `?mode=sheet` (all 8 run frames at 2x plus the recovery, fall and flip poses), `?play=1`, `?tun=1`. `pose=up` drives a held jump and stops right after the up-landing; `pose=land` stops on the touchdown frame.
+- Debug helpers that must keep working: `?mode=shot&pose=run|air|drop|fall|up|land|over|title|pause&shot=<seconds>&seed=<n>&zoom=<n>&ox=&oy=`, `?mode=test` (on-canvas self test), `?mode=sheet` (all 8 run frames at 2x plus the recovery, fall and flip poses), `?mode=audio` (audible-path check; `?bgm=<url>` overrides the track for tests), `?play=1`, `?tun=1`, `?outfit=<id>`, `?scenery=<id>`, `?wardrobe=1`. `pose=up` drives a held jump and stops right after the up-landing; `pose=land` stops on the touchdown frame.
+- Music: `bgm.mp3` belongs in the project root. Dev references it directly; `node build.js` embeds it as a data URI in the dist and warns loudly when the file is missing. Music starts with a run, pauses (position kept) on pause/blur, and stops+rewinds on game over. Chrome's virtual time does not advance media clocks, so the audio check asserts source/readyState/duration/play-state, not `currentTime`.
 - When zooming for a close-up, aim the crop at the wire the runner is on: `oy = wireY - 14` (wireY comes from `LEVELS`), otherwise the crop misses him.
 - `?mode=test` phases: 20 s pure auto-run, 30 s with forced drops, 40 s with scripted **held up-jumps** (only triggered on clear stretches). It must report `UP JUMPS OK n/n` with n > 0 or the status is CHECK.
+
+## Extension points
+
+- **Outfits** (`src/character.js`): add an entry to `OUTFITS` (name, price,
+  `hat` key from `HATS`, and a partial palette override) and to `OUTFIT_IDS`.
+  Never add animation frames for an outfit — the rig is shared. The collar row
+  of `BODY_REST` uses palette key `A`, which is how a "scarf colour" changes.
+  Sparks are earned in a run and banked at game over (`lj_sparks`), outfits
+  and the equipped one persist as `lj_owned` / `lj_outfit`. The wardrobe is on
+  the title screen (C).
+- **Sceneries** (`src/world.js`): add an entry to `THEMES` with sky/far/mid/
+  near/ground builders (each returns a canvas, mid returns `{c, vents}`) plus
+  `rain`, `mist`, `cars`, `poleGap`, `poleStyle` and a `wire` palette. The
+  parallax pipeline, wire/pole generation and physics are shared and must not
+  be forked per scenery. `poleGap` only widens spans (farmland is sparse on
+  purpose); jump/landing rules must stay identical across sceneries.
+  Selection: V on the title screen, persisted as `lj_scenery`.
+- **Window dressing** (`src/world.js`, `dressWindow`): mascot sticker, torn
+  posters, faded advert, ticket stub and scuffs are baked into the frame/glass
+  canvases once — decorative only, never interactive, and kept low-contrast so
+  they do not compete with the action.
+- **Character preview** (`preview.html` + `src/preview.js`): open it directly
+  to review states frame by frame with the same render code the game uses
+  (1-7 state, left/right step, space play, [ ] rate, T tail debug, O outfit).
 
 ## Verification workflow
 

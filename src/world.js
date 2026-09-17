@@ -427,6 +427,7 @@ function buildFrame(rng) {
   g.fillRect(cx + 3, cy - 13, 1, 2);
   g.fillRect(cx + 5, cy - 15, 1, 2);
   g.globalAlpha = 1;
+  dressWindow(g, rng);
   return c;
 }
 
@@ -882,6 +883,136 @@ var THEMES = {
   }
 };
 var THEME_IDS = ['shitamachi', 'farmland', 'lake'];
+
+/* ============================ window dressing ============================
+   Decorative, non-interactive clutter baked into the window frame / glass
+   layers: an invented mascot sticker, torn interior posters of a falling
+   detective, a faded advertisement, a ticket stub and scuffs. Kept small and
+   low-contrast so the gameplay area stays the focus. */
+
+/* invented mascot: a wire sparrow in a little hat (sticker style) */
+var MASCOT = [
+'.....WWWW.......',
+'...WWKKKKWW.....',
+'..WKKHHHHKKW....',
+'..WKHKHHKHKW....',
+'..WWKKKKKKWW....',
+'...WBBBBBBW.....',
+'..WBBBBBBBBW....',
+'.WBKBBBBBKBBW...',
+'.WBBBBBBBBBBW...',
+'.WBBYYYYYYBBW...',
+'..WBYYYYYYBW....',
+'...WWBBBBWW.....',
+'.....WSSW.......',
+'....WW..WW......',
+'...W......W.....',
+'................'
+];
+
+var FALLING_DET = [
+'..KK..',
+'.KHHK.',
+'..KK..',
+'.KCCK.',
+'KCCCCK',
+'KCcCcK',
+'.KCCK.',
+'.KPPK.',
+'K.KK.K',
+'.K..K.'
+];
+
+function tornEdge(g, x, y, w, h, rng, side) {
+  g.fillStyle = '#0d0a12';
+  for (var i = 0; i < h; i += 2) {
+    var d = 1 + Math.floor(rng.next() * 3);
+    if (side === 'right') g.fillRect(x + w - d, y + i, d, 2);
+    else g.fillRect(x, y + i, d, 2);
+  }
+}
+
+function drawPoster(g, x, y, w, h, bg, ink, mid, rng, withFigure) {
+  g.fillStyle = bg;
+  g.fillRect(x, y, w, h);
+  g.globalAlpha = 0.25;
+  g.fillStyle = '#000000';
+  g.fillRect(x + 1, y + h - 4, w - 2, 3);
+  g.globalAlpha = 1;
+  g.fillStyle = mid;
+  g.fillRect(x + 2, y + 2, w - 4, 1);
+  if (withFigure) {
+    var s = compile(FALLING_DET, { 'K': ink, 'H': mid, 'C': mid, 'c': ink, 'P': ink });
+    g.save();
+    g.translate(x + w * 0.5, y + h * 0.46);
+    g.rotate(0.42);
+    g.globalAlpha = 0.85;
+    g.drawImage(s.c, -s.w / 2, -s.h / 2);
+    g.restore();
+    g.globalAlpha = 1;
+    g.fillStyle = mid;
+    g.fillRect(x + w - 4, y + 3, 2, 1);
+    g.fillRect(x + w - 5, y + 6, 3, 1);
+    g.fillRect(x + w - 4, y + 9, 2, 1);
+  } else {
+    for (var r = 0; r < 3; r++) {
+      g.fillStyle = mid;
+      g.fillRect(x + 3, y + 4 + r * 5, w - 8 - Math.floor(rng.next() * 4), 2);
+      g.fillStyle = ink;
+      g.fillRect(x + 4, y + 7 + r * 5, 2, 1);
+    }
+    g.globalAlpha = 0.7;
+    g.fillStyle = ink;
+    g.fillRect(x + 3, y + h - 9, 8, 3);
+    g.globalAlpha = 1;
+  }
+  tornEdge(g, x, y, w, h, rng, rng.chance(0.5) ? 'right' : 'bottom');
+}
+
+function dressWindow(g, rng) {
+  /* torn poster fragment on the left interior wall, figure falling */
+  drawPoster(g, 2, 62, 17, 48, '#3a2830', '#191218', '#9a7a70', rng, true);
+  /* weathered advert fragment on the right wall, invented branding */
+  drawPoster(g, W - 19, 98, 17, 42, '#242c3c', '#12161f', '#8b9cb2', rng, false);
+  g.globalAlpha = 0.62;
+  drawText(g, 'HOSHI', W - 17, 102, '#cdd8e6', 1);
+  drawText(g, 'COLA', W - 16, 109, '#cdd8e6', 1);
+  g.globalAlpha = 1;
+  g.fillStyle = '#5c6678';
+  g.fillRect(W - 16, 116, 11, 1);
+  g.fillRect(W - 16, 119, 8, 1);
+  /* ticket stub tucked into the sill seal */
+  g.fillStyle = '#1a1520';
+  g.fillRect(136, 185, 26, 11);
+  g.fillStyle = '#e8dcc4';
+  g.fillRect(137, 186, 24, 9);
+  g.fillStyle = '#b8484a';
+  g.fillRect(137, 186, 24, 2);
+  g.fillStyle = '#c9bda4';
+  g.fillRect(140, 189, 18, 1);
+  g.fillRect(140, 192, 12, 1);
+  g.fillStyle = '#1a1520';
+  g.fillRect(158, 189, 2, 2);
+  /* mascot sticker on the glass */
+  var m = compile(MASCOT, {
+    'W': '#f2f5f8', 'B': '#3fb0c0', 'b': '#2a8898', 'Y': '#ffd98c',
+    'K': '#20202c', 'H': '#3a3a4c', 'S': '#e8b48c'
+  });
+  g.globalAlpha = 0.62;
+  g.drawImage(m.c, 40, 132);
+  g.globalAlpha = 0.16;
+  g.fillStyle = '#ffffff';
+  g.fillRect(40, 132, m.w, 1);
+  g.globalAlpha = 1;
+  /* scuffs and wear on the frame */
+  g.globalAlpha = 0.14;
+  for (var i = 0; i < 26; i++) {
+    g.fillStyle = rng.chance(0.5) ? '#000000' : '#6a6070';
+    var sx = rng.chance(0.5) ? rng.int(2, 18) : rng.int(W - 20, W - 4);
+    g.fillRect(sx, rng.int(20, 186), rng.int(3, 9), 1);
+  }
+  g.globalAlpha = 1;
+}
 
 function buildCity(seed, themeId) {
   var th = THEMES[themeId] || THEMES.shitamachi;

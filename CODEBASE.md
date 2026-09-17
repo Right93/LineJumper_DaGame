@@ -204,7 +204,10 @@ so the audio check asserts `readyState`/`duration`/play-state instead of
 
 ## 8. Known gaps
 
-- `bgm.mp3` is not in the repository (the loader also tries `bgm.ogg`/`bgm.wav`
-  and `?bgm=`); the build warns when nothing is embedded.
+- The soundtrack `bgm.mp3` lives in the project root (committed; Pixabay
+  dream-pop lofi, 192 s) and is embedded as a base64 data URI by the build.
+  The loader also tries `bgm.ogg`/`bgm.wav` and `?bgm=`; the build warns when
+  nothing is embedded. `--no-bgm` skips the embed for fast dev builds; the dev
+  shell then 404s `bgm.mp3`.
 - The preview harness only covers the character; world/scenery previews live in
   the in-game customise screen.

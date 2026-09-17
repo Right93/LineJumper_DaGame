@@ -90,8 +90,8 @@ Node DOM-stub harnesses (see `CODEBASE.md` → Verification).
 - Update this file, `CODEBASE.md` and the skill file whenever a decision is
   locked in.
 
-## Known gaps
+## Music
 
-- `bgm.mp3` is **not in the repository** — the music path is implemented and
-  verified but silent until the file is dropped in the project root. The build
-  embeds it automatically.
+- The soundtrack is committed as `bgm.mp3` in the project root (Pixabay,
+  192 s dream-pop lofi) and embedded as a base64 data URI by `node build.js`;
+  without it the build reports `no bgm file found` and music 404s in dev.

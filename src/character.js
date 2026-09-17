@@ -2,7 +2,7 @@
    Outfit palettes, the composed sprite rig (BODY + LEG_SHAPES + RUN_LEGS),
    flip tuck, landing recovery, coat-tail physics and all player rendering. */
 
-var LAND_T = 0.3, FLIP_T = 0.66, TAIL_SEG = 2.6;
+var LAND_T = 0.3, FLIP_T = 0.66;
 
 var PP = {
   'A': '#15101c', 'K': '#15101c', 'H': '#2a2433', 'h': '#3f3849',
@@ -484,68 +484,6 @@ function drawCane(x, y, theta, alpha) {
   g.fillStyle = '#efe6d8';
   g.fillRect(Math.round(x), Math.round(y), 1, 1);
   g.globalAlpha = 1;
-}
-
-var tailPts = [], tailKickV = 0, tailPrevX = 0, tailVX = 0;
-
-function initTail(x, y) {
-  tailPts = [];
-  tailPrevX = x;
-  tailVX = 0;
-  for (var i = 0; i < 9; i++) {
-    tailPts.push({ x: x - i * TAIL_SEG, y: y + i * 0.7, px: x - i * TAIL_SEG, py: y + i * 0.7 });
-  }
-}
-
-function tailKick(v) { tailKickV = v; }
-
-function updateTail(dt) {
-  var p = player;
-  if (!tailPts.length) initTail(p.x - 4, p.y - 12);
-  var ax = p.x - 4, ay = p.y - 12;
-  var inst = (ax - tailPrevX) / Math.max(dt, 1e-4);
-  tailPrevX = ax;
-  tailVX += (inst - tailVX) * Math.min(1, dt * 14);
-  var wind = -tailVX * 26 * dt * dt;
-  var i, q, vx, vy;
-  for (i = 0; i < tailPts.length; i++) {
-    q = tailPts[i];
-    if (i === 0) { q.x = ax; q.y = ay; q.px = ax; q.py = ay; continue; }
-    vx = (q.x - q.px) * 0.88;
-    vy = (q.y - q.py) * 0.88;
-    q.px = q.x; q.py = q.y;
-    q.x += vx + wind * (i < 3 ? 0.55 : 1);
-    q.y += vy + 0.11 - tailKickV * 0.14;
-  }
-  tailKickV *= 0.85;
-  for (var it = 0; it < 4; it++) {
-    for (var j = 1; j < tailPts.length; j++) {
-      var a2 = tailPts[j - 1], b2 = tailPts[j];
-      var dx = b2.x - a2.x, dy = b2.y - a2.y;
-      var d = Math.sqrt(dx * dx + dy * dy) || 0.001;
-      var diff = (d - TAIL_SEG) / d * 0.5;
-      b2.x -= dx * diff; b2.y -= dy * diff;
-      a2.x += dx * diff; a2.y += dy * diff;
-    }
-    tailPts[0].x = ax; tailPts[0].y = ay;
-  }
-}
-
-function drawTail() {
-  for (var i = 1; i < tailPts.length; i++) {
-    var a = tailPts[i - 1], b = tailPts[i];
-    var dx = b.x - a.x, dy = b.y - a.y;
-    var len = Math.sqrt(dx * dx + dy * dy);
-    var n = Math.max(1, Math.ceil(len));
-    g.fillStyle = i < 4 ? '#d8c296' : '#b0976c';
-    for (var k = 0; k < n; k++) {
-      var t = k / n;
-      var x = Math.round(a.x + dx * t - cam.x + cam.sway);
-      var y = Math.round(a.y + dy * t + cam.sy);
-      g.fillRect(x, y, 1, 1);
-      if (i < 3) g.fillRect(x, y + 1, 1, 1);
-    }
-  }
 }
 
 function blitScaled(s, x, y, k, flip) {

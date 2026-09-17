@@ -1,7 +1,7 @@
 /* LINE JUMPER - character preview harness (dev only, not part of the build)
 
    Opens as preview.html. Renders the character with the exact same code paths
-   the game uses (drawTail + drawPlayer) so anything approved here is what
+   the game uses (drawPlayer) so anything approved here is what
    ships. Cycle states, step frame by frame, toggle the tail debug view.
 
    Controls
@@ -44,7 +44,7 @@ var P = {
     { id: 'land', label: 'LAND / RECOVER', frames: 3 },
     { id: 'death', label: 'DEATH', frames: 12 }
   ],
-  si: 1, frame: 0, playing: true, speed: 1, acc: 0, showTail: false, outfit: 0
+  si: 1, frame: 0, playing: true, speed: 1, acc: 0, outfit: 0
 };
 
 function applyFrame() {
@@ -102,14 +102,6 @@ function renderPreview() {
   try {
     cam.sway = 0; cam.sy = 0;
     T = P.frame * 0.1;
-    updateTail(1 / 60);
-    drawTail();
-    if (P.showTail) {
-      for (var i = 0; i < tailPts.length; i++) {
-        g.fillStyle = i === 0 ? '#ff5a8a' : '#8ff0ff';
-        g.fillRect(Math.round(tailPts[i].x), Math.round(tailPts[i].y), 1, 1);
-      }
-    }
     drawPlayer();
     drawPreviewUI();
   } catch (err) {
@@ -132,7 +124,6 @@ function drawPreviewUI() {
     'LEFT/RIGHT STEP',
     'SPACE      PLAY',
     '[ ]        RATE',
-    'T          TAIL',
     'O          OUTFIT'
   ];
   g.globalAlpha = 0.55;
@@ -167,7 +158,6 @@ function onKey(e) {
   else if (code === 'Space') { e.preventDefault(); P.playing = !P.playing; }
   else if (code === 'BracketLeft') P.speed = Math.max(20, P.speed - 20);
   else if (code === 'BracketRight') P.speed = Math.min(300, P.speed + 20);
-  else if (code === 'KeyT') P.showTail = !P.showTail;
   else if (code === 'KeyO') {
     P.outfit = (P.outfit + 1) % OUTFIT_IDS.length;
     art = buildArt(OUTFIT_IDS[P.outfit]);

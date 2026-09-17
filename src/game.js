@@ -24,6 +24,7 @@ window.addEventListener('resize', resize);
 resize();
 
 var sparkBank = 0, ownedOutfits = ['detective'], equippedOutfit = 'detective', wardrobe = false, wardrobeMsg = '', wardrobeMsgT = 0;
+var bankDirty = false, lastBankSave = 0;
 
 loadWardrobe();
 if (qs.get('outfit')) equippedOutfit = OUTFITS[qs.get('outfit')] ? qs.get('outfit') : equippedOutfit;
@@ -214,7 +215,6 @@ function reset(longSafe, seed) {
     speed: SPEED0, stats: { jumps: 0, lands: 0, gapFalls: 0, drops: 0, stunts: 0, ups: 0, picks: 0, maxLvl: 2 }
   };
   player.y = wireAt(0, 1);
-  initTail(player.x - 4, player.y - 12);
   cam = { x: player.x - PX, sway: 0, sy: 0 };
   T = 0; sparks = 0; stunts = 0; ups = 0; floats = []; parts = []; steamParts = []; crows = []; drops = [];
   cars = [];
@@ -260,7 +260,6 @@ function gameOver(kind) {
   audio.crash();
   shakeT = 0.5; shakeA = 3.5; flashT = 0.22;
   burst(player.x, player.y - 10, kind === 'hit' ? '#ffd27a' : '#ff7a5a', 16, 90);
-  sparkBank += sparks;
   saveWardrobe();
   finalScore = { dist: distM(), sparks: sparks, stunts: stunts, ups: ups, total: totalScore() };
   var b = loadBest();
@@ -289,7 +288,6 @@ function landOn(w, fromState) {
   var p = player;
   p.y = w.y; p.lvl = w.lvl; p.onMain = w.onMain;
   p.state = 'land'; p.landT = LAND_T; p.vy = 0; p.flipT = 0;
-  tailKick(fromState === 'air' ? 2.2 : 1.5);
   if (w.lvl > p.stats.maxLvl) p.stats.maxLvl = w.lvl;
   p.stats.lands++;
   if (w.lvl < p.startLvl) {
@@ -428,7 +426,7 @@ function updateEntities(dt) {
         var pk = sp.picks[k];
         if (pk.got) continue;
         if (Math.abs(pk.x - p.x) < 8 && Math.abs(pk.y - (p.y - 15)) < 17) {
-          pk.got = true; sparks++; p.stats.picks++;
+          pk.got = true; sparks++; p.stats.picks++; sparkBank++; bankDirty = true;
           audio.pickup(sparks);
           burst(pk.x, pk.y, '#8ff0ff', 5, 45);
         }
@@ -516,7 +514,7 @@ function stepSim(dt) {
     updatePlayer(dt); updateEntities(dt);
   }
   if (wardrobeMsgT > 0) wardrobeMsgT -= dt;
-  updateTail(dt);
+  if (bankDirty && T - lastBankSave > 0.5) { saveWardrobe(); lastBankSave = T; bankDirty = false; }
   updateCamera(dt);
   input.jump = false; input.down = false;
 }
@@ -851,6 +849,7 @@ function drawHUD() {
   drawSparkIcon(g, 31, 41);
   drawTextOutline(g, ' ' + sparks, 38, 41, '#8ff0ff', '#150f1e', 1);
   drawTextOutline(g, (player.speed / 10).toFixed(1) + ' M/S', 30, 53, '#8fa0b8', '#150f1e', 1);
+  drawTextOutline(g, 'BANK ' + sparkBank, 30, 64, '#6f8aa0', '#150f1e', 1);
   for (var i = 0; i < floats.length; i++) {
     var fl = floats[i];
     var a = clamp(1 - fl.t / fl.life, 0, 1);
@@ -989,7 +988,6 @@ function render() {
   drawPoles();
   drawObstacles();
   drawPicks();
-  drawTail();
   drawPlayer();
   for (var p2 = 0; p2 < parts.length; p2++) {
     var pt = parts[p2];

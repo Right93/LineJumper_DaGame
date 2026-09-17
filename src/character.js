@@ -55,7 +55,7 @@ var OUTFITS = {
     }
   },
   verdant: {
-    name: 'VERDANT', price: 750, hat: 'flatcap',
+    name: 'VERDANT', price: 300, hat: 'flatcap',
     pal: {
       'A': '#d8a03c', 'H': '#4a3524', 'h': '#6b503a',
       'C': '#8d9a62', 'c': '#717d50', 'd': '#58623d',
@@ -63,7 +63,7 @@ var OUTFITS = {
     }
   },
   ninja: {
-    name: 'NINJA', price: 1200, hat: 'shinobi',
+    name: 'NINJA', price: 300, hat: 'shinobi',
     pal: {
       'A': '#3a3a54', 'H': '#242433', 'h': '#343448',
       'C': '#33334c', 'c': '#262636', 'd': '#1b1b26',
